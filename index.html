@@ -2590,8 +2590,9 @@ tr:hover td{background:rgba(255,255,255,.015)}
       </div>
       <!-- Tab switcher -->
       <div style="display:flex;gap:3px;margin-bottom:14px;background:var(--bg3);border-radius:8px;padding:3px;border:1px solid var(--bdr)">
-        <div class="tab active" style="flex:1;text-align:center" onclick="calMTab('trade',this)" id="cmt-trade">📝 Log Trade</div>
-        <div class="tab" style="flex:1;text-align:center" onclick="calMTab('chk',this)" id="cmt-chk">✅ Checklist</div>
+        <div class="tab active" style="flex:1;text-align:center;font-size:12px" onclick="calMTab('trade',this)" id="cmt-trade">📝 Trade</div>
+        <div class="tab" style="flex:1;text-align:center;font-size:12px" onclick="calMTab('chk',this)" id="cmt-chk">🌅 Pre-Session</div>
+        <div class="tab" style="flex:1;text-align:center;font-size:12px" onclick="calMTab('ptrade',this)" id="cmt-ptrade">📋 Pre-Trade</div>
       </div>
 
       <!-- ── TRADE FORM ── -->
@@ -2652,23 +2653,46 @@ tr:hover td{background:rgba(255,255,255,.015)}
         </div>
       </div>
 
-      <!-- ── CHECKLIST FORM ── -->
+      <!-- ── PRE-SESSION CHECKLIST FORM ── -->
       <div id="cm-chk" style="display:none">
         <div style="background:var(--bg3);border-radius:9px;padding:11px 13px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
-          <span style="font-size:20px">📅</span>
+          <span style="font-size:20px">🌅</span>
           <div>
-            <div style="font-size:12px;font-weight:600;color:var(--text)">Pre-session checklist</div>
+            <div style="font-size:12px;font-weight:600;color:var(--text)">Pre-Session Checklist</div>
             <div style="font-size:11px;color:var(--text2);margin-top:1px">For <strong id="cm-chk-date" style="color:var(--cyan)">—</strong></div>
           </div>
           <div style="margin-left:auto;font-size:11px;color:var(--text3)" id="cm-chk-prog">0/6 done</div>
         </div>
         <div id="cm-chk-items"></div>
         <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-g btn-sm" onclick="cmChkAll()">Mark All Done</button>
-          <button class="btn btn-g btn-sm" onclick="cmChkReset()">Reset</button>
+          <button class="btn btn-g btn-sm" onclick="cmChkAll('session')">Mark All Done</button>
+          <button class="btn btn-g btn-sm" onclick="cmChkReset('session')">Reset</button>
+          <button class="btn btn-g btn-sm" style="color:var(--red);border-color:rgba(255,71,87,.3)" onclick="cmChkClear('session')">🗑 Clear</button>
         </div>
         <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-c" style="flex:1;justify-content:center" onclick="saveCmChk()">✓ Save Session</button>
+          <button class="btn btn-c" style="flex:1;justify-content:center" onclick="saveCmChk('session')">✓ Save</button>
+          <button class="btn btn-g" onclick="closeModal('cal-modal')">Close</button>
+        </div>
+      </div>
+
+      <!-- ── PRE-TRADE CHECKLIST FORM ── -->
+      <div id="cm-ptrade" style="display:none">
+        <div style="background:var(--bg3);border-radius:9px;padding:11px 13px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">📋</span>
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--text)">Pre-Trade Checklist</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:1px">For <strong id="cm-ptrade-date" style="color:var(--cyan)">—</strong></div>
+          </div>
+          <div style="margin-left:auto;font-size:11px;color:var(--text3)" id="cm-ptrade-prog">0/8 done</div>
+        </div>
+        <div id="cm-ptrade-items"></div>
+        <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-g btn-sm" onclick="cmChkAll('trade')">Mark All Done</button>
+          <button class="btn btn-g btn-sm" onclick="cmChkReset('trade')">Reset</button>
+          <button class="btn btn-g btn-sm" style="color:var(--red);border-color:rgba(255,71,87,.3)" onclick="cmChkClear('trade')">🗑 Clear</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-c" style="flex:1;justify-content:center" onclick="saveCmChk('trade')">✓ Save</button>
           <button class="btn btn-g" onclick="closeModal('cal-modal')">Close</button>
         </div>
       </div>
@@ -3221,30 +3245,78 @@ function renderCalSide(ds){
   const dt=dayT(ds),dp=dayP(ds),parts=ds.split('-');
   const dObj=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
   const lbl=`${DAYS_F[dObj.getDay()]}, ${MONTHS[parseInt(parts[1])-1]} ${parseInt(parts[2])}`;
-  const hasChk=calChkSessions[ds],als=dayAlerts[ds]||[];
+  const sess=calChkSessions[ds]||{};
+  const hasSession=!!(sess.session&&Object.keys(sess.session).length);
+  const hasPreTrade=!!(sess.trade&&Object.keys(sess.trade).length);
+  const als=dayAlerts[ds]||[];
+  // Session done count
+  const sessDone=hasSession?Object.values(sess.session).filter(Boolean).length:0;
+  const sessTotal=hasSession?Object.keys(sess.session).length:0;
+  const tradeDone=hasPreTrade?Object.values(sess.trade).filter(Boolean).length:0;
+  const tradeTotal=hasPreTrade?Object.keys(sess.trade).length:0;
+
   let c=`<div style="font-family:var(--head);font-size:13px;font-weight:700;margin-bottom:3px">${lbl}</div>
     <div style="font-size:11px;color:var(--text2);margin-bottom:10px">${dt.length} trade${dt.length!==1?'s':''} · ${dt.length?`<span class="${dp>=0?'pos':'neg'}">${fdSum(dp)} P&L</span>`:'no trades logged'}</div>
-    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
       <button class="btn btn-c btn-sm" onclick="openCalLogModal('${ds}')">+ Log Trade</button>
-      <button class="btn btn-sm btn-g" onclick="openChkModal('${ds}')" style="${hasChk?'color:var(--purple);border-color:rgba(179,136,255,.4)':''}">${hasChk?'✓ Checklist done':'Run Checklist'}</button>
+      <button class="btn btn-sm btn-g" onclick="openChkModal('${ds}','session')" style="${hasSession?'color:var(--green);border-color:rgba(0,230,118,.4)':''}">${hasSession?'🌅 '+sessDone+'/'+sessTotal+' done':'🌅 Pre-Session'}</button>
+      <button class="btn btn-sm btn-g" onclick="openChkModal('${ds}','trade')" style="${hasPreTrade?'color:var(--cyan);border-color:rgba(0,212,255,.4)':''}">${hasPreTrade?'📋 '+tradeDone+'/'+tradeTotal+' done':'📋 Pre-Trade'}</button>
     </div>`;
+
+  // Checklist status strip
+  if(hasSession||hasPreTrade){
+    c+='<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">';
+    if(hasSession){
+      const pct=sessTotal?Math.round(sessDone/sessTotal*100):0;
+      c+=`<div style="flex:1;min-width:120px;background:var(--bg3);border-radius:7px;padding:7px 10px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Pre-Session</div>
+        <div style="height:4px;background:var(--bg4);border-radius:2px;overflow:hidden"><div style="height:100%;background:var(--green);width:${pct}%;border-radius:2px"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:3px">
+          <span style="font-size:10px;color:var(--text2)">${sessDone}/${sessTotal} done</span>
+          <button class="ic-btn del" style="font-size:10px;height:16px" onclick="calClearChk('${ds}','session')" title="Clear session checklist">✕</button>
+        </div>
+      </div>`;
+    }
+    if(hasPreTrade){
+      const pct=tradeTotal?Math.round(tradeDone/tradeTotal*100):0;
+      c+=`<div style="flex:1;min-width:120px;background:var(--bg3);border-radius:7px;padding:7px 10px">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Pre-Trade</div>
+        <div style="height:4px;background:var(--bg4);border-radius:2px;overflow:hidden"><div style="height:100%;background:var(--cyan);width:${pct}%;border-radius:2px"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:3px">
+          <span style="font-size:10px;color:var(--text2)">${tradeDone}/${tradeTotal} done</span>
+          <button class="ic-btn del" style="font-size:10px;height:16px" onclick="calClearChk('${ds}','trade')" title="Clear pre-trade checklist">✕</button>
+        </div>
+      </div>`;
+    }
+    c+='</div>';
+  }
+
   if(als.length){
     c+='<div class="divider" style="margin:8px 0"></div>';
     als.forEach(a=>{c+=`<div style="background:var(--bg3);border-left:3px solid ${a.type==='profit'?'var(--green)':a.type==='loss'?'var(--red)':'var(--gold)'};border-radius:0 6px 6px 0;padding:6px 10px;margin-bottom:5px"><div style="font-size:11px;font-weight:500">${a.txt}</div></div>`;});
   }
+
   if(dt.length){
     c+='<div class="divider" style="margin:8px 0"></div>';
+    c+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div style="font-size:11px;font-weight:600;color:var(--text2)">Trades (${dt.length})</div>
+      ${dt.length?`<button class="btn btn-g btn-xs" style="color:var(--red);border-color:rgba(255,71,87,.3)" onclick="calDeleteAllTrades('${ds}')">🗑 Clear All</button>`:''}
+    </div>`;
     dt.forEach(t=>{
       const p=Math.round(P(t)*100)/100;
       const tagHtml=t.tags&&t.tags.length?`<div style="margin-top:4px">${t.tags.slice(0,3).map(tg=>`<span class="tag ${['revenge-trade','fomo','stop-out'].includes(tg)?'tr':tg.includes('trend')||tg.includes('break')?'tg':'tb'}">${tg}</span>`).join('')}</div>`:'';
       c+=`<div style="background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;padding:9px 10px;margin-bottom:6px">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div style="display:flex;align-items:center;gap:5px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+          <div style="display:flex;align-items:center;gap:5px;flex:1;min-width:0">
             <span style="font-family:var(--mono);font-size:12px;font-weight:600">${t.symbol}</span>
             <span class="tag ${t.dir==='Long'?'tg':'tr'}">${t.dir}</span>
             <span class="tag tgr" style="font-size:9px">${t.asset}</span>
           </div>
-          <span style="font-family:var(--mono);font-size:12px;font-weight:600;${p>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(p)}</span>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            <span style="font-family:var(--mono);font-size:12px;font-weight:600;${p>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(p)}</span>
+            <button class="ic-btn" onclick="openCalEditTrade(${t.id})" title="Edit trade">✎</button>
+            <button class="ic-btn del" onclick="calDeleteTrade(${t.id},'${ds}')" title="Delete trade">✕</button>
+          </div>
         </div>
         <div style="font-size:10px;color:var(--text2);margin-top:3px">${t.time||''}${t.setup?' · '+t.setup:''} · E:${t.entry} → X:${t.exit}</div>
         ${tagHtml}
@@ -3354,14 +3426,25 @@ function toggleCmTag(id, el){
   if(calSelTags.has(id)){calSelTags.delete(id);el.style.background='var(--bg3)';el.style.color='var(--text2)';el.style.borderColor='var(--bdr2)';}
   else{calSelTags.add(id);const t=tagLibrary.find(x=>x.id===id);const s=TAG_STYLE[t?.color||'tc-blue']||'';el.style.cssText=s+';padding:3px 10px;border-radius:14px;font-size:11px;cursor:pointer;transition:all .15s';}
 }
-function openChkModal(ds){
-  calLogDate=ds;
-  document.getElementById('cm-chk-date').textContent=ds;
-  const ex=calChkSessions[ds]||{};
-  const items=['Review economic calendar','Identify key S/R levels','Define max daily loss ($'+((appSettings.lossLimit)||500)+')','Assess current emotional state','Confirm setup criteria are met','Set daily profit target'];
-  document.getElementById('cm-chk-items').innerHTML=items.map((item,i)=>`<div class="chk ${ex[i]?'done':''}" onclick="togCmChk(this,${i})" data-idx="${i}"><div class="chk-box">${ex[i]?'✓':''}</div><div class="chk-txt">${item}</div></div>`).join('');
-  updateCmChkProg(ex, items.length);
-  calMTab('chk',document.getElementById('cmt-chk'));
+function openChkModal(ds, type){
+  calLogDate = ds;
+  type = type || 'session';
+  const sess = calChkSessions[ds] || {};
+  const ex = sess[type] || {};
+
+  if(type === 'session'){
+    const items = checklists.session.map(x=>x.text);
+    document.getElementById('cm-chk-date').textContent = ds;
+    document.getElementById('cm-chk-items').innerHTML = items.map((item,i)=>`<div class="chk ${ex[i]?'done':''}" onclick="togCmChkTyped(this,${i},'session')" data-idx="${i}"><div class="chk-box">${ex[i]?'✓':''}</div><div class="chk-txt">${item}</div></div>`).join('');
+    updateCmChkProgTyped(ex, items.length, 'session');
+    calMTab('chk', document.getElementById('cmt-chk'));
+  } else {
+    const items = checklists.trade.map(x=>x.text);
+    document.getElementById('cm-ptrade-date').textContent = ds;
+    document.getElementById('cm-ptrade-items').innerHTML = items.map((item,i)=>`<div class="chk ${ex[i]?'done':''}" onclick="togCmChkTyped(this,${i},'trade')" data-idx="${i}"><div class="chk-box">${ex[i]?'✓':''}</div><div class="chk-txt">${item}</div></div>`).join('');
+    updateCmChkProgTyped(ex, items.length, 'trade');
+    calMTab('ptrade', document.getElementById('cmt-ptrade'));
+  }
   document.getElementById('cal-modal').classList.add('open');
 }
 function updateCmChkProg(ex, total){
@@ -3369,29 +3452,49 @@ function updateCmChkProg(ex, total){
   const el=document.getElementById('cm-chk-prog');
   if(el)el.textContent=`${done}/${total} done`;
 }
-function togCmChk(el,idx){
+function togCmChkTyped(el,idx,type){
   el.classList.toggle('done');
-  el.querySelector('.chk-box').textContent=el.classList.contains('done')?'✓':'';
-  const items=document.querySelectorAll('#cm-chk-items .chk');
-  const done=[...items].filter(x=>x.classList.contains('done')).length;
-  const el2=document.getElementById('cm-chk-prog');
-  if(el2)el2.textContent=`${done}/${items.length} done`;
+  el.querySelector('.chk-box').textContent = el.classList.contains('done') ? '✓' : '';
+  const listId = type==='session' ? 'cm-chk-items' : 'cm-ptrade-items';
+  const items = document.querySelectorAll('#'+listId+' .chk');
+  const done = [...items].filter(x=>x.classList.contains('done')).length;
+  updateCmChkProgTyped(null, items.length, type, done);
 }
-function cmChkAll(){
-  document.querySelectorAll('#cm-chk-items .chk').forEach(el=>{
-    el.classList.add('done');el.querySelector('.chk-box').textContent='✓';
-  });
-  const total=document.querySelectorAll('#cm-chk-items .chk').length;
-  const el=document.getElementById('cm-chk-prog');if(el)el.textContent=`${total}/${total} done`;
+// Legacy alias used elsewhere
+function togCmChk(el,idx){togCmChkTyped(el,idx,'session');}
+function updateCmChkProgTyped(ex, total, type, doneOverride){
+  const done = doneOverride !== undefined ? doneOverride : (ex ? Object.values(ex).filter(Boolean).length : 0);
+  const progId = type==='session' ? 'cm-chk-prog' : 'cm-ptrade-prog';
+  const el = document.getElementById(progId);
+  if(el) el.textContent = done+'/'+total+' done';
 }
-function cmChkReset(){
-  document.querySelectorAll('#cm-chk-items .chk').forEach(el=>{
-    el.classList.remove('done');el.querySelector('.chk-box').textContent='';
-  });
-  const total=document.querySelectorAll('#cm-chk-items .chk').length;
-  const el=document.getElementById('cm-chk-prog');if(el)el.textContent=`0/${total} done`;
+function updateCmChkProg(ex, total){ updateCmChkProgTyped(ex, total, 'session'); }
+function cmChkAll(type){
+  type = type || 'session';
+  const listId = type==='session' ? 'cm-chk-items' : 'cm-ptrade-items';
+  document.querySelectorAll('#'+listId+' .chk').forEach(el=>{el.classList.add('done');el.querySelector('.chk-box').textContent='✓';});
+  const tot = document.querySelectorAll('#'+listId+' .chk').length;
+  updateCmChkProgTyped(null, tot, type, tot);
 }
-function calMTab(tab,el){document.querySelectorAll('#cal-modal .tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');document.getElementById('cm-trade').style.display=tab==='trade'?'block':'none';document.getElementById('cm-chk').style.display=tab==='chk'?'block':'none';}
+function cmChkReset(type){
+  type = type || 'session';
+  const listId = type==='session' ? 'cm-chk-items' : 'cm-ptrade-items';
+  document.querySelectorAll('#'+listId+' .chk').forEach(el=>{el.classList.remove('done');el.querySelector('.chk-box').textContent='';});
+  const tot = document.querySelectorAll('#'+listId+' .chk').length;
+  updateCmChkProgTyped(null, tot, type, 0);
+}
+function cmChkClear(type){
+  type = type || 'session';
+  if(!calLogDate) return;
+  if(!confirm('Clear this checklist for '+calLogDate+'?')) return;
+  if(calChkSessions[calLogDate]) delete calChkSessions[calLogDate][type];
+  const listId = type==='session' ? 'cm-chk-items' : 'cm-ptrade-items';
+  document.querySelectorAll('#'+listId+' .chk').forEach(el=>{el.classList.remove('done');el.querySelector('.chk-box').textContent='';});
+  const tot = document.querySelectorAll('#'+listId+' .chk').length;
+  updateCmChkProgTyped(null, tot, type, 0);
+  showNotif('Checklist cleared', (type==='session'?'Pre-Session':'Pre-Trade')+' cleared for '+calLogDate,'info');
+}
+function calMTab(tab,el){document.querySelectorAll('#cal-modal .tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');document.getElementById('cm-trade').style.display=tab==='trade'?'block':'none';document.getElementById('cm-chk').style.display=tab==='chk'?'block':'none';document.getElementById('cm-ptrade').style.display=tab==='ptrade'?'block':'none';}
 
 function calcCmPrev(){
   const en=parseFloat(document.getElementById('cm-entry').value);
@@ -3439,17 +3542,63 @@ function saveCmTrade(){
   renderCalSide(calLogDate);
   showNotif('Trade saved',`${sym} ${newTrade.dir} — ${fdSum(p)}`,(p>=0?'success':'danger'));
 }
-function saveCmChk(){
-  const items={};
-  document.querySelectorAll('#cm-chk-items .chk').forEach(el=>{items[parseInt(el.dataset.idx)]=el.classList.contains('done');});
-  calChkSessions[calLogDate]=items;
+function saveCmChk(type){
+  type = type || 'session';
+  const listId = type==='session' ? 'cm-chk-items' : 'cm-ptrade-items';
+  const items = {};
+  document.querySelectorAll('#'+listId+' .chk').forEach(el=>{items[parseInt(el.dataset.idx)]=el.classList.contains('done');});
+  if(!calChkSessions[calLogDate]) calChkSessions[calLogDate] = {};
+  calChkSessions[calLogDate][type] = items;
   const done=Object.values(items).filter(Boolean).length;
   const total=Object.keys(items).length;
   closeModal('cal-modal');
   renderCal();
   if(calSel===calLogDate)renderCalSide(calLogDate);
-  showNotif(done===total?'Checklist complete!':'Checklist saved',`${done}/${total} items completed for ${calLogDate}`,(done===total?'success':'info'));
+  showNotif(done===total?'Checklist complete! ✓':'Checklist saved',`${done}/${total} items — ${type==='session'?'Pre-Session':'Pre-Trade'} for ${calLogDate}`,(done===total?'success':'info'));
 }
+
+// ═══════════════════════════════════════
+// CALENDAR EDIT / DELETE / CLEAR HELPERS
+// ═══════════════════════════════════════
+
+// ── Delete single trade from calendar side panel ──
+function calDeleteTrade(id, ds){
+  if(!confirm('Delete this trade? This cannot be undone.')) return;
+  trades = trades.filter(t => t.id !== id);
+  renderCal();
+  calSel = ds;
+  renderCalSide(ds);
+  showNotif('Trade deleted', 'Removed from ' + ds, 'danger');
+}
+
+// ── Delete ALL trades for a given day ──
+function calDeleteAllTrades(ds){
+  const count = trades.filter(t => t.date === ds && t.accountId === activeAccountId).length;
+  if(!count) return;
+  if(!confirm('Delete all ' + count + ' trade(s) on ' + ds + '? This cannot be undone.')) return;
+  trades = trades.filter(t => !(t.date === ds && t.accountId === activeAccountId));
+  renderCal();
+  calSel = ds;
+  renderCalSide(ds);
+  showNotif('Trades cleared', 'All trades removed for ' + ds, 'danger');
+}
+
+// ── Clear a checklist (session or trade) for a given day ──
+function calClearChk(ds, type){
+  const label = type === 'session' ? 'Pre-Session' : 'Pre-Trade';
+  if(!confirm('Clear the ' + label + ' checklist for ' + ds + '?')) return;
+  if(calChkSessions[ds]) {
+    delete calChkSessions[ds][type];
+    if(!Object.keys(calChkSessions[ds]).length) delete calChkSessions[ds];
+  }
+  renderCal();
+  calSel = ds;
+  renderCalSide(ds);
+  showNotif('Checklist cleared', label + ' checklist removed for ' + ds, 'info');
+}
+
+// ── Open edit-trade modal from calendar side panel (delegates to the main openEditTrade) ──
+function openCalEditTrade(id){ openEditTrade(id); }
 
 // ═══════════════════════════════════════
 // ANALYTICS
