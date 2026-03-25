@@ -4309,7 +4309,91 @@ function saveTagModal(){const name=document.getElementById('tm-name').value.trim
 // ═══════════════════════════════════════
 // CSV IMPORT
 // ═══════════════════════════════════════
-function handleCSV(inp){const file=inp.files[0];if(!file)return;const r=new FileReader();r.onload=e=>{const lines=e.target.result.split('\n').filter(Boolean),hdrs=lines[0].split(',').map(h=>h.trim().toLowerCase());let added=0,errs=0;for(let i=1;i<lines.length;i++){const v=lines[i].split(',');if(v.length<5){errs++;continue;}const row={};hdrs.forEach((h,idx)=>row[h]=v[idx]?.trim());try{const en=parseFloat(row.entry),ex=parseFloat(row.exit),qty=parseFloat(row.quantity||row.qty||1),mult=parseFloat(row.contract_multiplier||row.multiplier||1);if(!en||!ex){errs++;continue;}trades.push({id:Date.now()+i,date:row.date||new Date().toISOString().slice(0,10),time:row.time||'09:30',symbol:row.symbol||'UNKNOWN',asset:row.asset_class||row.asset||'Stocks',dir:row.direction||row.dir||'Long',entry:en,exit:ex,qty,mult,tags:(row.tags||'').split('|').filter(Boolean),setup:'',notes:row.notes||'',media:[]});added++;}catch(err){errs++;}}const res=document.getElementById('csv-res');res.style.display='block';res.innerHTML=`<div style="background:${added>0?'rgba(0,230,118,.07)':'rgba(255,71,87,.07)'};border:1px solid ${added>0?'rgba(0,230,118,.25)':'rgba(255,71,87,.25)'};border-radius:8px;padding:10px 12px;font-size:12px">${added>0?`✅ ${added} trades imported`:''} ${errs>0?`⚠️ ${errs} rows had errors`:''}</div>`;if(added>0)showNotif('Import complete',`${added} trades imported`,'success');};r.readAsText(file);}
+function handleCSV(inp){
+  const file = inp.files[0];
+  if(!file) return;
+  const r = new FileReader();
+  r.onload = e => {
+    const raw = e.target.result;
+    // Support both comma and semicolon delimiters
+    const lines = raw.split(/\r?\n/).filter(l => l.trim());
+    if(lines.length < 2) {
+      showNotif('Empty file', 'CSV has no data rows', 'danger');
+      inp.value = ''; return;
+    }
+    // Auto-detect delimiter
+    const delim = lines[0].includes(';') ? ';' : ',';
+    const hdrs = lines[0].split(delim).map(h => h.trim().toLowerCase().replace(/[^a-z0-9_]/g,''));
+    let added = 0, errs = 0, errDetails = [];
+    const base = Date.now();
+    for(let i = 1; i < lines.length; i++){
+      const v = lines[i].split(delim);
+      if(v.length < 4){ errs++; errDetails.push('Row '+i+': too few columns'); continue; }
+      const row = {};
+      hdrs.forEach((h,idx) => row[h] = (v[idx]||'').trim().replace(/^"|"$/g,''));
+      try{
+        const en   = parseFloat(row.entry);
+        const ex   = parseFloat(row.exit);
+        const qty  = parseFloat(row.quantity||row.qty||1) || 1;
+        const mult = parseFloat(row.contract_multiplier||row.multiplier||row.mult||1) || 1;
+        if(isNaN(en)||!en||isNaN(ex)||!ex){
+          errs++; errDetails.push('Row '+i+': invalid entry/exit prices'); continue;
+        }
+        const dir = (row.direction||row.dir||'Long');
+        const normDir = dir.charAt(0).toUpperCase() + dir.slice(1).toLowerCase();
+        trades.push({
+          id: base + i,
+          accountId: activeAccountId,
+          date: row.date || new Date().toISOString().slice(0,10),
+          time: row.time || '09:30',
+          symbol: (row.symbol||'UNKNOWN').toUpperCase(),
+          asset: row.asset_class || row.asset || 'Stocks',
+          dir: ['Long','Short'].includes(normDir) ? normDir : 'Long',
+          entry: en, exit: ex, qty, mult,
+          fee: parseFloat(row.fee||row.commission||0)||0,
+          setup: row.setup || '',
+          tags: (row.tags||'').split('|').filter(Boolean).map(t=>t.trim().toLowerCase()),
+          notes: row.notes || row.note || '',
+          preNotes: '', durNotes: '', postNotes: '',
+          media: []
+        });
+        added++;
+      } catch(err){ errs++; errDetails.push('Row '+i+': '+err.message); }
+    }
+
+    // Show result in the import card
+    const res = document.getElementById('csv-res');
+    if(res){
+      res.style.display = 'block';
+      const okHtml = added > 0
+        ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:${errs?'8px':'0'}">
+             <span style="font-size:18px">✅</span>
+             <div><div style="font-weight:600;font-size:13px">${added} trade${added!==1?'s':''} imported successfully</div>
+             <div style="font-size:11px;color:var(--text2);margin-top:2px">Added to <strong>${getActiveAccount()?.name||'your account'}</strong> — visible in Trade Log</div></div>
+           </div>` : '';
+      const errHtml = errs > 0
+        ? `<div style="display:flex;align-items:flex-start;gap:8px">
+             <span style="font-size:18px">⚠️</span>
+             <div><div style="font-weight:600;font-size:13px">${errs} row${errs!==1?'s':''} skipped</div>
+             <div style="font-size:10px;color:var(--text3);margin-top:4px">${errDetails.slice(0,3).join('<br>')}</div></div>
+           </div>` : '';
+      res.innerHTML = `<div style="background:${added>0?'rgba(0,230,118,.07)':'rgba(255,71,87,.07)'};border:1px solid ${added>0?'rgba(0,230,118,.25)':'rgba(255,71,87,.25)'};border-radius:9px;padding:12px 14px">${okHtml}${errHtml}</div>`;
+    }
+
+    if(added > 0){
+      // Refresh trade log so imported trades are immediately visible
+      if(typeof renderTrades === 'function') renderTrades();
+      if(typeof initLog === 'function') initLog();
+      showNotif('Import complete', added+' trade'+(added!==1?'s':'')+' added to '+( getActiveAccount()?.name||'account'), 'success');
+    } else {
+      showNotif('Import failed', 'No valid trades found in file', 'danger');
+    }
+
+    // ── Reset file input so the same file can be re-imported ──
+    inp.value = '';
+  };
+  r.readAsText(file);
+}
 
 // ═══════════════════════════════════════
 // SETTINGS
@@ -7248,6 +7332,10 @@ const SKIN_TONES = [
 ];
 
 function initGreetingSettings() {
+  // ── Populate saved profile fields ──
+  const nameEl = document.getElementById('s-name');
+  if(nameEl && appSettings.name) nameEl.value = appSettings.name;
+
   const baseEmoji = appSettings.greetingEmoji || '👋';
   const skinMod = appSettings.greetingEmojiSkinTone || '';
 
