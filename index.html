@@ -1869,7 +1869,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
             </div>
             <div class="card">
               <div class="sec">P&L Calculation</div>
-              <div class="pref-row"><div><div style="font-size:13px;font-weight:500">Include Commission in P&L</div><div style="font-size:11px;color:var(--text2)">Subtract fees from reported P&L</div></div><label class="tgl-wrap"><input type="checkbox" id="s-include-fees" checked><span class="tgl-track"></span></label></div>
+              <div class="pref-row"><div><div style="font-size:13px;font-weight:500">Include Commission in P&L</div><div style="font-size:11px;color:var(--text2)">Subtract fees from reported P&L</div></div><label class="tgl-wrap"><input type="checkbox" id="s-include-fees" checked onchange="appSettings.includeFees=this.checked;saveCurrentUserData()"><span class="tgl-track"></span></label></div>
               <div class="pref-row"><div><div style="font-size:13px;font-weight:500">Show Gross & Net P&L</div><div style="font-size:11px;color:var(--text2)">Display both before and after fees</div></div><label class="tgl-wrap"><input type="checkbox" id="s-show-gross-net"><span class="tgl-track"></span></label></div>
               <div class="fg" style="margin-top:12px"><label>Default Commission ($ per contract/share)</label>
                 <input type="number" id="s-default-commission" value="0" step="0.01" min="0">
@@ -2814,10 +2814,17 @@ function P(t){
   // Use parseFloat+toFixed to snap result to max 6 decimal places, preventing drift
   return parseFloat((diff*qty*mult).toFixed(6));
 }
+// Net P&L: subtracts commission/fees when the setting is enabled
+function Pnet(t){
+  const gross=P(t);
+  if(appSettings.includeFees===false) return gross;
+  const fee=parseFloat(t.fee||0);
+  return parseFloat((gross-fee).toFixed(6));
+}
 function dayT(d,accountId){const acct=accountId||activeAccountId;return trades.filter(t=>t.date===d&&t.accountId===acct);}
 function dayP(d,accountId){
   const acct=accountId||activeAccountId;
-  const cents=dayT(d,acct).reduce((s,t)=>s+Math.round(P(t)*100),0);
+  const cents=dayT(d,acct).reduce((s,t)=>s+Math.round(Pnet(t)*100),0);
   return cents/100;
 }
 // Format: show 2 decimal places when value has cents, whole dollars otherwise
@@ -2857,10 +2864,10 @@ function _fmtMoney(v,cur,dec){
   // plusminus (default)
   return (v>=0?'+':'-')+cur+numStr;
 }
-function wr(a){const w=a.filter(t=>P(t)>0).length;return a.length?Math.round(w/a.length*100):0;}
+function wr(a){const w=a.filter(t=>Pnet(t)>0).length;return a.length?Math.round(w/a.length*100):0;}
 function totP(accountId){
   const acct=accountId||activeAccountId;
-  return Math.round(getAccountTrades(acct).reduce((s,t)=>s+Math.round(P(t)*100),0))/100;
+  return Math.round(getAccountTrades(acct).reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
 }
 function monT(accountId){const acct=accountId||activeAccountId;const p=`${calYr}-${String(calMon+1).padStart(2,'0')}`;return trades.filter(t=>t.date.startsWith(p)&&t.accountId===acct);}
 
@@ -2920,7 +2927,7 @@ function initHome(){
     {l:"Today's P&L",v:fdSum(dayP('2025-03-14')),c:dayP('2025-03-14')>=0?'pos':'neg'},
   ].map(s=>`<div class="card-sm" style="cursor:pointer;border:1px solid var(--bdr)" onclick="nav('dashboard')"><div class="kl">${s.l}</div><div style="font-family:var(--mono);font-size:18px;font-weight:500" class="${s.c}">${s.v}</div></div>`).join('');
   const rec=[...getAccountTrades()].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
-  document.getElementById('h-recent').innerHTML=rec.map(t=>{const p=Math.round(P(t)*100)/100;return`<tr><td style="font-family:var(--mono)">${t.symbol}</td><td><span class="tag tgr">${t.asset}</span></td><td>${t.dir==='Long'?'<span class="tag tg">Long</span>':'<span class="tag tr">Short</span>'}</td><td style="font-family:var(--mono);${p>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(p)}</td><td style="color:var(--text3);font-size:11px">${t.date.slice(5)}</td></tr>`;}).join('');
+  document.getElementById('h-recent').innerHTML=rec.map(t=>{const p=Math.round(Pnet(t)*100)/100;return`<tr><td style="font-family:var(--mono)">${t.symbol}</td><td><span class="tag tgr">${t.asset}</span></td><td>${t.dir==='Long'?'<span class="tag tg">Long</span>':'<span class="tag tr">Short</span>'}</td><td style="font-family:var(--mono);${p>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(p)}</td><td style="color:var(--text3);font-size:11px">${t.date.slice(5)}</td></tr>`;}).join('');
 }
 function fmtTime(d) {
   if(appSettings.timeFmt==='12h'){
@@ -3146,9 +3153,9 @@ function playDNTSound(){
 // ═══════════════════════════════════════
 function initDashboard(){
   const activeAcct=getActiveAccount();const tot=totP();const bal=activeAcct.balance+tot;
-  const wins=getAccountTrades().filter(t=>P(t)>0),losses=getAccountTrades().filter(t=>P(t)<0);
-  const grossW=Math.round(wins.reduce((s,t)=>s+Math.round(P(t)*100),0))/100;
-  const grossL=Math.abs(Math.round(losses.reduce((s,t)=>s+Math.round(P(t)*100),0))/100);
+  const wins=getAccountTrades().filter(t=>Pnet(t)>0),losses=getAccountTrades().filter(t=>Pnet(t)<0);
+  const grossW=Math.round(wins.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
+  const grossL=Math.abs(Math.round(losses.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100);
   const avgW=wins.length?grossW/wins.length:0;
   const avgL=losses.length?grossL/losses.length:0;
   const pf=grossL>0?(grossW/grossL).toFixed(2):'∞';
@@ -3171,12 +3178,12 @@ function initDashboard(){
   const ab=document.getElementById('db-asset');ab.innerHTML='';
   ['Futures','Forex','Stocks'].forEach(a=>{
     const at=getAccountTrades().filter(t=>t.asset===a);
-    const ap=Math.round(at.reduce((s,t)=>s+Math.round(P(t)*100),0))/100;
+    const ap=Math.round(at.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
     ab.innerHTML+=`<div class="mr"><div><div style="font-size:12px;font-weight:500">${a}</div><div style="font-size:10px;color:var(--text3)">${at.length} trades · ${wr(at)}% WR</div></div><div style="font-family:var(--mono);font-size:12px;${ap>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(ap)}</div></div>`;
   });
   if(charts_.eq)charts_.eq.destroy();
   const sorted=getAccountTrades().sort((a,b)=>a.date.localeCompare(b.date));let run=activeAcct.balance||50000;
-  charts_.eq=new Chart(document.getElementById('c-eq').getContext('2d'),{type:'line',data:{labels:sorted.map(t=>t.date.slice(5)),datasets:[{data:sorted.map(t=>{run+=P(t);return run;}),borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,0.05)',fill:true,tension:0.4,pointRadius:2,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#3d5068',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#3d5068',font:{size:9},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,.04)'}}}}});
+  charts_.eq=new Chart(document.getElementById('c-eq').getContext('2d'),{type:'line',data:{labels:sorted.map(t=>t.date.slice(5)),datasets:[{data:sorted.map(t=>{run+=Pnet(t);return run;}),borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,0.05)',fill:true,tension:0.4,pointRadius:2,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#3d5068',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#3d5068',font:{size:9},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,.04)'}}}}});
 }
 
 // ═══════════════════════════════════════
@@ -3303,7 +3310,7 @@ function renderCalSide(ds){
       ${dt.length?`<button class="btn btn-g btn-xs" style="color:var(--red);border-color:rgba(255,71,87,.3)" onclick="calDeleteAllTrades('${ds}')">🗑 Clear All</button>`:''}
     </div>`;
     dt.forEach(t=>{
-      const p=Math.round(P(t)*100)/100;
+      const p=Math.round(Pnet(t)*100)/100;
       const tagHtml=t.tags&&t.tags.length?`<div style="margin-top:4px">${t.tags.slice(0,3).map(tg=>`<span class="tag ${['revenge-trade','fomo','stop-out'].includes(tg)?'tr':tg.includes('trend')||tg.includes('break')?'tg':'tb'}">${tg}</span>`).join('')}</div>`:'';
       c+=`<div style="background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;padding:9px 10px;margin-bottom:6px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
@@ -3329,10 +3336,10 @@ function renderCalSide(ds){
 }
 function renderCalSum(){
   const mt=monT();
-  const pnl=Math.round(mt.reduce((s,t)=>s+Math.round(P(t)*100),0))/100;
-  const wins=mt.filter(t=>P(t)>0),losses=mt.filter(t=>P(t)<0);
-  const grossW=Math.round(wins.reduce((s,t)=>s+Math.round(P(t)*100),0))/100;
-  const grossL=Math.abs(Math.round(losses.reduce((s,t)=>s+Math.round(P(t)*100),0))/100);
+  const pnl=Math.round(mt.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
+  const wins=mt.filter(t=>Pnet(t)>0),losses=mt.filter(t=>Pnet(t)<0);
+  const grossW=Math.round(wins.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
+  const grossL=Math.abs(Math.round(losses.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100);
   const avgW=wins.length?grossW/wins.length:0;
   const avgL=losses.length?grossL/losses.length:0;
   const pf=grossL>0?(grossW/grossL).toFixed(2):'—';
@@ -3356,7 +3363,7 @@ function renderCalSpark(){
 }
 function renderCalDow(){
   const mt=monT(),dows={Mon:0,Tue:0,Wed:0,Thu:0,Fri:0},dm={1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri'};
-  mt.forEach(t=>{const d=new Date(t.date).getDay();if(dm[d])dows[dm[d]]+=P(t);});
+  mt.forEach(t=>{const d=new Date(t.date).getDay();if(dm[d])dows[dm[d]]+=Pnet(t);});
   const maxA=Math.max(...Object.values(dows).map(v=>Math.abs(v)),1);
   document.getElementById('c-dow').innerHTML=Object.entries(dows).map(([d,v])=>{const vs=Math.round(v*100)/100;return`<div class="hrow"><span class="hrl">${d}</span><div class="hrb"><div class="hrf" style="width:${(Math.abs(vs)/maxA*100).toFixed(0)}%;background:${vs>=0?'rgba(0,230,118,.5)':'rgba(255,71,87,.5)'}"></div></div><span class="hrv ${vs>=0?'pos':'neg'}">${fdSum(vs)}</span></div>`}).join('');
 }
@@ -3606,13 +3613,13 @@ function openCalEditTrade(id){ openEditTrade(id); }
 function aTab(tab,el){document.querySelectorAll('#pg-analytics .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById('at-charts').style.display=tab==='charts'?'block':'none';document.getElementById('at-stats').style.display=tab==='stats'?'block':'none';document.getElementById('at-asset').style.display=tab==='asset'?'block':'none';if(tab==='charts')renderACharts();if(tab==='stats')renderAStats();if(tab==='asset')renderAAsset();}
 function initAnalytics(){renderACharts();}
 function renderACharts(){
-  const sorted=[...getAccountTrades()].sort((a,b)=>a.date.localeCompare(b.date)),pnls=sorted.map(t=>P(t));
+  const sorted=[...getAccountTrades()].sort((a,b)=>a.date.localeCompare(b.date)),pnls=sorted.map(t=>Pnet(t));
   if(charts_.bar)charts_.bar.destroy();
   charts_.bar=new Chart(document.getElementById('c-bar').getContext('2d'),{type:'bar',data:{labels:sorted.map(t=>t.symbol),datasets:[{data:pnls,backgroundColor:pnls.map(p=>p>=0?'rgba(0,230,118,.65)':'rgba(255,71,87,.65)'),borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#3d5068',font:{size:8},maxRotation:50},grid:{display:false}},y:{ticks:{color:'#3d5068',font:{size:9},callback:v=>'$'+v},grid:{color:'rgba(255,255,255,.04)'}}}}});
   if(charts_.pie)charts_.pie.destroy();
   const acTrades=getAccountTrades();
-  const w=acTrades.filter(t=>P(t)>0).length;
-  const l=acTrades.filter(t=>P(t)<0).length;
+  const w=acTrades.filter(t=>Pnet(t)>0).length;
+  const l=acTrades.filter(t=>Pnet(t)<0).length;
   const b=acTrades.length-w-l;
   const tot=w+l+b||1;
   const wPct=Math.round(w/tot*100);
@@ -3704,13 +3711,13 @@ function renderACharts(){
       </div>`).join('');
   }
   const tBuk={'09:00':0,'10:00':0,'11:00':0,'12:00':0,'13:00':0,'14:00':0,'15:00':0};
-  getAccountTrades().forEach(t=>{const h=parseInt((t.time||'09:00').split(':')[0]);const k=String(h).padStart(2,'0')+':00';if(tBuk[k]!==undefined)tBuk[k]+=P(t);});
+  getAccountTrades().forEach(t=>{const h=parseInt((t.time||'09:00').split(':')[0]);const k=String(h).padStart(2,'0')+':00';if(tBuk[k]!==undefined)tBuk[k]+=Pnet(t);});
   const tv=Object.values(tBuk);
   if(charts_.tod)charts_.tod.destroy();
   charts_.tod=new Chart(document.getElementById('c-tod').getContext('2d'),{type:'bar',data:{labels:Object.keys(tBuk),datasets:[{data:tv,backgroundColor:tv.map(v=>v>=0?'rgba(0,212,255,.65)':'rgba(255,107,53,.65)'),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#3d5068',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#3d5068',font:{size:9},callback:v=>'$'+v},grid:{color:'rgba(255,255,255,.04)'}}}}});
   const dBuk={Mon:{pnl:0,count:0},Tue:{pnl:0,count:0},Wed:{pnl:0,count:0},Thu:{pnl:0,count:0},Fri:{pnl:0,count:0}};
   const dMap={1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri'};
-  getAccountTrades().forEach(t=>{const d=new Date(t.date).getDay();if(dMap[d]){dBuk[dMap[d]].pnl+=P(t);dBuk[dMap[d]].count++;}});
+  getAccountTrades().forEach(t=>{const d=new Date(t.date).getDay();if(dMap[d]){dBuk[dMap[d]].pnl+=Pnet(t);dBuk[dMap[d]].count++;}});
   const dDays=Object.keys(dBuk);
   const dv=dDays.map(d=>Math.round(dBuk[d].pnl*100)/100);
   const dCounts=dDays.map(d=>dBuk[d].count);
@@ -3762,21 +3769,21 @@ function renderACharts(){
   });
 }
 function renderAStats(){
-  const wins=trades.filter(t=>P(t)>0),losses=trades.filter(t=>P(t)<0);
-  const grossW=Math.round(wins.reduce((s,t)=>s+Math.round(P(t)*100),0))/100;
-  const grossL=Math.abs(Math.round(losses.reduce((s,t)=>s+Math.round(P(t)*100),0))/100);
+  const wins=trades.filter(t=>Pnet(t)>0),losses=trades.filter(t=>Pnet(t)<0);
+  const grossW=Math.round(wins.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
+  const grossL=Math.abs(Math.round(losses.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100);
   const avgW=wins.length?grossW/wins.length:0;
   const avgL=losses.length?grossL/losses.length:0;
-  const allPnls=trades.map(t=>P(t));
-  document.getElementById('s-lw').textContent=wins.length?'+$'+Math.max(...wins.map(t=>P(t))).toFixed(2):'—';
-  document.getElementById('s-ll').textContent=losses.length?'-$'+Math.abs(Math.min(...losses.map(t=>P(t)))).toFixed(2):'—';
+  const allPnls=trades.map(t=>Pnet(t));
+  document.getElementById('s-lw').textContent=wins.length?'+$'+Math.max(...wins.map(t=>Pnet(t))).toFixed(2):'—';
+  document.getElementById('s-ll').textContent=losses.length?'-$'+Math.abs(Math.min(...losses.map(t=>Pnet(t)))).toFixed(2):'—';
   document.getElementById('s-aw').textContent='+$'+avgW.toFixed(2);
   document.getElementById('s-al').textContent='-$'+avgL.toFixed(2);
   document.getElementById('s-pf').textContent=grossL>0?(grossW/grossL).toFixed(2):'∞';
   const tc={};getAccountTrades().forEach(t=>t.tags.forEach(tg=>{tc[tg]=(tc[tg]||0)+1;}));
   document.getElementById('s-tags').innerHTML=Object.entries(tc).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,v])=>`<div class="mr"><span class="tag ${['revenge-trade','fomo','stop-out'].includes(k)?'tr':'tb'}">${k}</span><span style="font-family:var(--mono);font-size:12px">${v}x</span></div>`).join('');
 }
-function renderAAsset(){['Futures','Forex','Stocks'].forEach((a,i)=>{const at=getAccountTrades().filter(t=>t.asset===a);const ap=Math.round(at.reduce((s,t)=>s+Math.round(P(t)*100),0))/100;const ids=['as-fut','as-fx','as-stk'];document.getElementById(ids[i]).innerHTML=`<div class="mr"><span style="font-size:12px;color:var(--text2)">Trades</span><span style="font-family:var(--mono);font-size:12px">${at.length}</span></div><div class="mr"><span style="font-size:12px;color:var(--text2)">P&L</span><span style="font-family:var(--mono);font-size:12px;${ap>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(ap)}</span></div><div class="mr"><span style="font-size:12px;color:var(--text2)">Win Rate</span><span style="font-family:var(--mono);font-size:12px">${wr(at)}%</span></div><div class="mr"><span style="font-size:12px;color:var(--text2)">Avg/Trade</span><span style="font-family:var(--mono);font-size:12px">${at.length?fdSum(ap/at.length):'—'}</span></div>`;});}
+function renderAAsset(){['Futures','Forex','Stocks'].forEach((a,i)=>{const at=getAccountTrades().filter(t=>t.asset===a);const ap=Math.round(at.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;const ids=['as-fut','as-fx','as-stk'];document.getElementById(ids[i]).innerHTML=`<div class="mr"><span style="font-size:12px;color:var(--text2)">Trades</span><span style="font-family:var(--mono);font-size:12px">${at.length}</span></div><div class="mr"><span style="font-size:12px;color:var(--text2)">P&L</span><span style="font-family:var(--mono);font-size:12px;${ap>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(ap)}</span></div><div class="mr"><span style="font-size:12px;color:var(--text2)">Win Rate</span><span style="font-family:var(--mono);font-size:12px">${wr(at)}%</span></div><div class="mr"><span style="font-size:12px;color:var(--text2)">Avg/Trade</span><span style="font-family:var(--mono);font-size:12px">${at.length?fdSum(ap/at.length):'—'}</span></div>`;});}
 
 // ═══════════════════════════════════════
 // TRADE LOG
@@ -3792,8 +3799,8 @@ function renderTrades(){
   const filtered=[...at].filter(t=>{
     if(fa&&t.asset!==fa)return false;
     if(fd_&&t.dir!==fd_)return false;
-    if(fr==='Win'&&P(t)<=0)return false;
-    if(fr==='Loss'&&P(t)>=0)return false;
+    if(fr==='Win'&&Pnet(t)<=0)return false;
+    if(fr==='Loss'&&Pnet(t)>=0)return false;
     if(fs&&t.setup!==fs)return false;
     return true;
   }).sort((a,b)=>b.date.localeCompare(a.date)||((b.time||'').localeCompare(a.time||'')));
@@ -3801,8 +3808,8 @@ function renderTrades(){
   // Summary bar
   const sb=document.getElementById('trades-summary-bar');
   if(sb&&filtered.length){
-    const tot=Math.round(filtered.reduce((s,t)=>s+Math.round(P(t)*100),0))/100;
-    const wins=filtered.filter(t=>P(t)>0).length;
+    const tot=Math.round(filtered.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
+    const wins=filtered.filter(t=>Pnet(t)>0).length;
     const pct=Math.round(wins/filtered.length*100);
     sb.innerHTML=`
       <div style="display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--bdr);border-radius:8px;padding:6px 12px;font-size:12px">
@@ -3818,7 +3825,7 @@ function renderTrades(){
 
   // Table rows
   document.getElementById('tbl-trades').innerHTML=filtered.map(t=>{
-    const p=Math.round(P(t)*100)/100;
+    const p=Math.round(Pnet(t)*100)/100;
     const isOpen=activeTdpId===t.id;
     const notePreview=t.notes?t.notes.slice(0,40)+(t.notes.length>40?'…':''):'—';
     const mediaCount=(t.media||[]).length;
@@ -3862,7 +3869,7 @@ function toggleTradeDetail(id){
 }
 
 function renderTradeDetailPanel(t){
-  const p=Math.round(P(t)*100)/100;
+  const p=Math.round(Pnet(t)*100)/100;
   const grossP=p; const fee=parseFloat(t.fee||0); const netP=Math.round((p-fee)*100)/100;
   const acct=accounts.find(a=>a.id===t.accountId)||getActiveAccount();
 
@@ -3993,7 +4000,7 @@ function delTrade(id){if(confirm('Delete this trade?')){if(activeTdpId===id){act
 function exportTradesCSV(){
   const at=getAccountTrades();
   const headers='date,time,symbol,asset,direction,entry,exit,qty,multiplier,pnl,setup,tags,notes';
-  const rows=at.map(t=>{const p=Math.round(P(t)*100)/100;return[t.date,t.time||'',t.symbol,t.asset,t.dir,t.entry,t.exit,t.qty,t.mult,p,t.setup||'',t.tags.join('|'),`"${(t.notes||'').replace(/"/g,'""')}"`].join(',');});
+  const rows=at.map(t=>{const p=Math.round(Pnet(t)*100)/100;return[t.date,t.time||'',t.symbol,t.asset,t.dir,t.entry,t.exit,t.qty,t.mult,p,t.setup||'',t.tags.join('|'),`"${(t.notes||'').replace(/"/g,'""')}"`].join(',');});
   const csv=[headers,...rows].join('\n');
   const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='tradeedge_trades.csv';a.click();URL.revokeObjectURL(url);
@@ -4618,6 +4625,10 @@ function saveSection(section) {
     if(sub !== undefined) appSettings.greetingSubtitle = sub || appSettings.greetingSubtitle;
     // emoji + skin tone are saved directly in appSettings by their click handlers
   }
+  if(section === 'trading') {
+    const incFees = document.getElementById('s-include-fees');
+    if(incFees) appSettings.includeFees = incFees.checked;
+  }
   showNotif('Settings saved', section.charAt(0).toUpperCase()+section.slice(1)+' settings updated', 'success');
 }
 
@@ -4625,7 +4636,7 @@ function exportData(format) {
   if(format === 'csv') {
     const headers = 'date,symbol,asset_class,direction,entry,exit,quantity,contract_multiplier,pnl,setup,tags,notes';
     const rows = trades.map(t => {
-      const p = Math.round(P(t)*100)/100;
+      const p = Math.round(Pnet(t)*100)/100;
       return [t.date,t.symbol,t.asset,t.dir,t.entry,t.exit,t.qty,t.mult,p,t.setup||'',t.tags.join('|'),`"${(t.notes||'').replace(/"/g,'""')}"`].join(',');
     });
     const csv = [headers,...rows].join('\n');
@@ -4728,7 +4739,7 @@ function renderAccDropdownList(){
   const typeColors={live:'var(--green)',demo:'var(--text2)',prop:'var(--purple)',paper:'var(--gold)'};
   el.innerHTML=accounts.map(a=>{
     const acTrades=getAccountTrades(a.id);
-    const pnl=Math.round(acTrades.reduce((s,t)=>s+Math.round(P(t)*100),0))/100;
+    const pnl=Math.round(acTrades.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
     const bal=a.balance+pnl;
     const cur=a.currency||'$';
     const isActive=a.id===activeAccountId;
@@ -4854,7 +4865,7 @@ function renderAccSettingsList(){
   const typeColors={live:'var(--green)',demo:'var(--text2)',prop:'var(--purple)',paper:'var(--gold)'};
   el.innerHTML=accounts.map(a=>{
     const acTrades=getAccountTrades(a.id);
-    const pnl=Math.round(acTrades.reduce((s,t)=>s+Math.round(P(t)*100),0))/100;
+    const pnl=Math.round(acTrades.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
     const bal=a.balance+pnl;
     const cur=a.currency||'$';
     const isActive=a.id===activeAccountId;
@@ -5189,8 +5200,8 @@ function renderWeekProgress() {
   const weekDates = [];
   for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(mon.getDate()+i);weekDates.push(d.toISOString().slice(0,10));}
   const wt = getAccountTrades().filter(t=>weekDates.includes(t.date));
-  const wPnl = Math.round(wt.reduce((s,t)=>s+Math.round(P(t)*100),0))/100;
-  const wWins = wt.filter(t=>P(t)>0).length;
+  const wPnl = Math.round(wt.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
+  const wWins = wt.filter(t=>Pnet(t)>0).length;
   const wWR = wt.length ? Math.round(wWins/wt.length*100) : 0;
   const wTarget = tradingPlan.dailyTarget * 5;
   const wPct = Math.min(100, wPnl>0 ? Math.round(wPnl/wTarget*100) : 0);
@@ -5418,12 +5429,12 @@ function goalProgress(g) {
   else if(g.period==='monthly') rel = at.filter(t=>t.date>=monthStart);
   else if(g.period==='custom'&&g.start) rel = at.filter(t=>t.date>=g.start&&(!g.end||t.date<=g.end));
 
-  const pnl = Math.round(rel.reduce((s,t)=>s+Math.round(P(t)*100),0))/100;
-  const wins = rel.filter(t=>P(t)>0);
-  const losses = rel.filter(t=>P(t)<0);
+  const pnl = Math.round(rel.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
+  const wins = rel.filter(t=>Pnet(t)>0);
+  const losses = rel.filter(t=>Pnet(t)<0);
   const winRate = rel.length ? Math.round(wins.length/rel.length*100) : 0;
-  const grossW = Math.round(wins.reduce((s,t)=>s+Math.round(P(t)*100),0))/100;
-  const grossL = Math.abs(Math.round(losses.reduce((s,t)=>s+Math.round(P(t)*100),0))/100);
+  const grossW = Math.round(wins.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
+  const grossL = Math.abs(Math.round(losses.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100);
   const pf = grossL>0 ? grossW/grossL : (grossW>0?99:0);
 
   let current=0, pct=0, label='';
@@ -5441,7 +5452,7 @@ function goalProgress(g) {
     current=dd; label='-'+fdSum(dd)+' / limit '+fdSum(tgt);
   } else if(g.type==='streak'){
     let best=0,cur2=0;
-    [...rel].sort((a,b)=>a.date.localeCompare(b.date)).forEach(t=>{P(t)>0?cur2++:cur2=0; if(cur2>best)best=cur2;});
+    [...rel].sort((a,b)=>a.date.localeCompare(b.date)).forEach(t=>{Pnet(t)>0?cur2++:cur2=0; if(cur2>best)best=cur2;});
     current=best; pct=tgt>0?best/tgt*100:0; label=best+' / '+tgt+' wins';
   } else { pct=0; label=g.notes||'Custom'; }
   return {pct, current, label};
@@ -5576,7 +5587,7 @@ function renderLinkedTrades() {
   });
   const tbody = document.getElementById('plan-linked-tbl'); if(!tbody) return;
   tbody.innerHTML = filtered.map(t=>{
-    const p = Math.round(P(t)*100)/100;
+    const p = Math.round(Pnet(t)*100)/100;
     const c = tradeCompliance[t.id];
     const status = !c?'unlinked':c.compliant?'compliant':'violation';
     const badge = {unlinked:`<span class="tag tgr" style="cursor:pointer;font-size:10px" onclick="openTradeReview(${t.id})">Review →</span>`,compliant:'<span class="tag tg" style="font-size:10px">✓ Compliant</span>',violation:'<span class="tag tr" style="font-size:10px">✗ Violation</span>'}[status];
@@ -5615,7 +5626,7 @@ function renderComplianceStats() {
 
 function openTradeReview(id) {
   const t = trades.find(x=>x.id===id); if(!t) return;
-  const p = Math.round(P(t)*100)/100;
+  const p = Math.round(Pnet(t)*100)/100;
   const ex = tradeCompliance[id]||{compliant:true,violations:[],reviewNote:''};
   const activeRules = tradingPlan.rules.filter(r=>r.active);
 
@@ -6427,14 +6438,14 @@ function renderMissedAnalytics() {
   const commonSetups = [...new Set([...SETUP_TYPES.map(s=>s.n),...Object.keys(setupMap)])];
   const takenAvg = commonSetups.map(s=>{
     const ts=at.filter(t=>t.setup===s);
-    return ts.length?Math.round(ts.reduce((a,t)=>a+Math.round(P(t)*100),0)/ts.length)/100:null;
+    return ts.length?Math.round(ts.reduce((a,t)=>a+Math.round(Pnet(t)*100),0)/ts.length)/100:null;
   });
   const missedAvg = commonSetups.map(s=>{
     const ms=mt.filter(m=>m.setup===s);
     return ms.length?Math.round(ms.reduce((a,m)=>a+(m.estPnl||0)*100,0)/ms.length)/100:null;
   });
   const vsLabels=commonSetups.filter((_,i)=>takenAvg[i]!==null||missedAvg[i]!==null);
-  const vsTaken=vsLabels.map(s=>{const ts=at.filter(t=>t.setup===s);return ts.length?Math.round(ts.reduce((a,t)=>a+Math.round(P(t)*100),0)/ts.length)/100:null;});
+  const vsTaken=vsLabels.map(s=>{const ts=at.filter(t=>t.setup===s);return ts.length?Math.round(ts.reduce((a,t)=>a+Math.round(Pnet(t)*100),0)/ts.length)/100:null;});
   const vsMissed=vsLabels.map(s=>{const ms=mt.filter(m=>m.setup===s);return ms.length?Math.round(ms.reduce((a,m)=>a+(m.estPnl||0)*100,0)/ms.length)/100:null;});
 
   if(missedCharts.vs) missedCharts.vs.destroy();
@@ -6679,7 +6690,7 @@ async function doRegister() {
     tradingPlan: { name:'My Trading Plan', style:'Day Trading', rules:[], setups:[], updatedAt: new Date().toISOString().slice(0,10) },
     tagLibrary: [...DEFAULT_TAG_LIBRARY],
     checklists: { session: [...DEFAULT_CHK_SESSION], trade: [...DEFAULT_CHK_TRADE] },
-    alertRules: [], SETUP_TYPES: [...DEFAULT_SETUP_TYPES],
+    alertRules: [], SETUP_TYPES: [...DEFAULT_SETUP_TYPES], includeFees: true,
     appSettings: { ...DEFAULT_APP_SETTINGS },
     calChkSessions: {},
   };
