@@ -720,6 +720,9 @@ tr:hover td{background:rgba(255,255,255,.015)}
       </div>
       <button class="auth-btn" onclick="doLogin()">Sign In →</button>
       <div class="auth-switch">New to TradeEdge? <a onclick="showAuthPanel('register')">Create an account</a></div>
+      <div style="text-align:center;margin-top:12px">
+        <a onclick="openHowToModal()" style="font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline;text-underline-offset:3px">❓ How to Use TradeEdge Pro</a>
+      </div>
     </div>
 
     <!-- Register panel -->
@@ -749,6 +752,9 @@ tr:hover td{background:rgba(255,255,255,.015)}
       </div>
       <button class="auth-btn" onclick="doRegister()">Create Account →</button>
       <div class="auth-switch">Already have an account? <a onclick="showAuthPanel('login')">Sign in</a></div>
+      <div style="text-align:center;margin-top:12px">
+        <a onclick="openHowToModal()" style="font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline;text-underline-offset:3px">❓ How to Use TradeEdge Pro</a>
+      </div>
     </div>
   </div>
 </div>
@@ -884,6 +890,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
           </div>
           <div style="padding:6px 6px">
             <div onclick="nav('settings');closeUserMenu()" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--text2);transition:background .15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">⚙️ Settings</div>
+            <div onclick="openHowToModal();closeUserMenu()" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--text2);transition:background .15s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='transparent'">❓ How to Use</div>
             <div onclick="doLogout()" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--red);transition:background .15s" onmouseover="this.style.background='rgba(255,71,87,.08)'" onmouseout="this.style.background='transparent'">⏻ Sign Out</div>
           </div>
         </div>
@@ -1600,6 +1607,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
           <div class="tab" onclick="sTb('trading',this)">📈 Trading</div>
           <div class="tab" onclick="sTb('notifications',this)">🔔 Notifications</div>
           <div class="tab" onclick="sTb('data',this)">💾 Data</div>
+          <div class="tab" onclick="sTb('howto',this)">❓ How to Use</div>
         </div>
 
         <!-- ACCOUNT -->
@@ -1980,6 +1988,171 @@ tr:hover td{background:rgba(255,255,255,.015)}
           </div>
         </div>
 
+        <div id="st-howto" style="display:none">
+          <div style="max-width:820px">
+
+            <!-- Hero banner -->
+            <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(179,136,255,.05));border-color:rgba(0,212,255,.2)">
+              <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+                <div style="font-size:40px">📈</div>
+                <div style="flex:1">
+                  <div style="font-family:var(--head);font-size:17px;font-weight:700;margin-bottom:4px">TradeEdge Pro — User Guide</div>
+                  <div style="font-size:12px;color:var(--text2);line-height:1.7">Everything you need to know to get the most out of your private trading journal. Use the sections below as a reference any time.</div>
+                </div>
+                <button class="btn btn-c btn-sm" onclick="openHowToModal()">▶ Interactive Tour</button>
+              </div>
+            </div>
+
+            <!-- Quick Start -->
+            <div class="card" style="margin-bottom:14px">
+              <div class="sec">🚀 Quick Start (5 Minutes)</div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                  <div style="width:26px;height:26px;border-radius:50%;background:rgba(0,212,255,.15);border:1.5px solid var(--cyan);color:var(--cyan);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+                  <div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Set up your trading account</div><div style="font-size:12px;color:var(--text2);line-height:1.6">You are in <strong>Settings → Account → Trading Accounts</strong> right now. Click <strong>+ Add Account</strong>, enter your starting balance, broker name, and account type (Live, Demo, or Prop). This is the foundation all P&amp;L calculations build on. You can add multiple accounts and switch between them using the account picker at the top of the screen.</div></div>
+                </div>
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                  <div style="width:26px;height:26px;border-radius:50%;background:rgba(0,212,255,.15);border:1.5px solid var(--cyan);color:var(--cyan);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+                  <div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Log your first trade</div><div style="font-size:12px;color:var(--text2);line-height:1.6">Click the <strong>➕</strong> icon in the sidebar to open the 5-step trade wizard. Required: symbol, entry price, exit price. Optional but useful: quantity, contract multiplier, commission/fee, setup type, tags, and notes. P&amp;L (net of fees) calculates automatically. You can also log trades directly from the Calendar by clicking any day → <strong>+ Log Trade</strong>.</div></div>
+                </div>
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                  <div style="width:26px;height:26px;border-radius:50%;background:rgba(0,212,255,.15);border:1.5px solid var(--cyan);color:var(--cyan);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+                  <div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Use your checklists before every session</div><div style="font-size:12px;color:var(--text2);line-height:1.6">Open the <strong>📅 Calendar</strong>, click today, then tap <strong>🌅 Pre-Session</strong> to run your morning preparation checklist before your session begins, and <strong>📋 Pre-Trade</strong> to validate each setup before you enter. Both checklists are fully customisable in the <strong>✅ Checklist</strong> page — add, edit, delete, or reorder items to match your exact process.</div></div>
+                </div>
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                  <div style="width:26px;height:26px;border-radius:50%;background:rgba(0,212,255,.15);border:1.5px solid var(--cyan);color:var(--cyan);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
+                  <div><div style="font-size:13px;font-weight:600;margin-bottom:2px">Analyse your performance</div><div style="font-size:12px;color:var(--text2);line-height:1.6">The <strong>📊 Dashboard</strong> shows your live balance and equity curve. The <strong>📈 Analytics</strong> page breaks down P&amp;L by time of day, day of week, and asset class to reveal exactly when and what you trade best — and worst.</div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2-column feature cards -->
+            <div class="g2" style="margin-bottom:14px">
+              <div class="card">
+                <div class="sec">📅 Calendar</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                  <strong style="color:var(--text)">Day Panel</strong> — Click any day for its P&amp;L, all logged trades with edit/delete buttons, and checklist status bars.<br>
+                  <strong style="color:var(--text)">+ Log Trade</strong> — Add a trade directly from any calendar day.<br>
+                  <strong style="color:var(--text)">🌅 Pre-Session</strong> — Morning routine checklist saved per day. Green progress bar when partially complete.<br>
+                  <strong style="color:var(--text)">📋 Pre-Trade</strong> — Setup validation checklist saved independently per day. Cyan progress bar.<br>
+                  <strong style="color:var(--text)">✎ Edit / ✕ Delete</strong> — Action buttons on every trade card in the day panel.<br>
+                  <strong style="color:var(--text)">🗑 Clear All</strong> — Remove all trades for a selected day.<br>
+                  <strong style="color:var(--text)">Cell colours</strong> — Green = profitable, Red = losing. Brighter = bigger. ★ = biggest session of the month.
+                </div>
+              </div>
+              <div class="card">
+                <div class="sec">📊 Dashboard & Analytics</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                  <strong style="color:var(--text)">Balance</strong> — Starting balance + all-time net P&amp;L (fees deducted).<br>
+                  <strong style="color:var(--text)">Equity Curve</strong> — Running balance plotted trade-by-trade.<br>
+                  <strong style="color:var(--text)">Profit Factor</strong> — Gross wins ÷ gross losses. Above 1.5 = solid. Above 2.0 = excellent.<br>
+                  <strong style="color:var(--text)">Time of Day</strong> — Which hours generate the most P&amp;L.<br>
+                  <strong style="color:var(--text)">Day of Week</strong> — Your best and worst trading days.<br>
+                  <strong style="color:var(--text)">Asset Breakdown</strong> — P&amp;L and win rate by Futures, Forex, Stocks, Crypto.<br>
+                  <strong style="color:var(--text)">Stats tab</strong> — Max drawdown, Sharpe ratio, streak data, best/worst trade.
+                </div>
+              </div>
+              <div class="card">
+                <div class="sec">📋 Trade Log</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                  <strong style="color:var(--text)">Filter bar</strong> — Filter by date, symbol, direction, setup, win/loss, asset, tag.<br>
+                  <strong style="color:var(--text)">Expand row</strong> — Click any trade to see full notes, media, setup info.<br>
+                  <strong style="color:var(--text)">✎ Edit</strong> — 5-tab edit modal: Details, Setup, Tags, Media, Notes.<br>
+                  <strong style="color:var(--text)">Export CSV</strong> — Download all filtered trades for Excel analysis.<br>
+                  <strong style="color:var(--text)">Summary bar</strong> — Live total trades, net P&amp;L, and win rate for current filter.
+                </div>
+              </div>
+              <div class="card">
+                <div class="sec">✅ Checklists</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                  Two independent lists: <strong>Pre-Session</strong> and <strong>Pre-Trade</strong>.<br>
+                  <strong style="color:var(--text)">Edit items</strong> — Hover any item and click ✎ to edit text or category.<br>
+                  <strong style="color:var(--text)">Add items</strong> — Click + Add Item at the bottom of each column.<br>
+                  <strong style="color:var(--text)">Drag to reorder</strong> — Use the ⠿ handle to rearrange items.<br>
+                  <strong style="color:var(--text)">Categories</strong> — Colour-coded: Preparation, Risk, Mental, Technical, Strategy.<br>
+                  <strong style="color:var(--text)">Celebration</strong> — A confetti animation fires when all items are checked.
+                </div>
+              </div>
+              <div class="card">
+                <div class="sec">📝 Missed Trades</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                  Log setups you saw but didn't take — crucial for measuring opportunity cost and FOMO patterns.<br>
+                  <strong style="color:var(--text)">Journal tab</strong> — Cards with setup, estimated P&amp;L, reason skipped, and lesson.<br>
+                  <strong style="color:var(--text)">Analytics tab</strong> — Cumulative missed P&amp;L over time, breakdown by reason, setup comparison chart (missed vs taken P&amp;L).
+                </div>
+              </div>
+              <div class="card">
+                <div class="sec">📥 CSV Import</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                  Import trades in bulk from broker CSV exports or spreadsheets.<br>
+                  <strong style="color:var(--text)">Required columns</strong> — <code style="font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">date, symbol, direction, entry, exit</code><br>
+                  <strong style="color:var(--text)">Optional columns</strong> — <code style="font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">quantity, contract_multiplier, fee, setup, tags, notes, time, asset_class</code><br>
+                  <strong style="color:var(--text)">Tags</strong> — pipe-separated: <code style="font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">breakout|fomo|trend</code><br>
+                  <strong style="color:var(--text)">Delimiter</strong> — comma or semicolon, auto-detected.<br>
+                  Imported trades are added to your currently active account and appear instantly in the Trade Log.
+                </div>
+              </div>
+              <div class="card">
+                <div class="sec">📄 Trading Plan</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                  A living document for your trading strategy and rules.<br>
+                  <strong style="color:var(--text)">Strategy tab</strong> — Edge, setup types, market conditions, affirmations.<br>
+                  <strong style="color:var(--text)">Risk Rules tab</strong> — Daily loss limit, max risk per trade, drawdown rules.<br>
+                  <strong style="color:var(--text)">Goals tab</strong> — Set daily/weekly/monthly P&amp;L, win rate, trade count goals with live progress bars.<br>
+                  <strong style="color:var(--text)">Linked Trades tab</strong> — Review each trade against your rules and mark compliance.
+                </div>
+              </div>
+              <div class="card">
+                <div class="sec">⚙️ Settings</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                  <strong style="color:var(--text)">Account</strong> — Trader name, greeting emoji, password change, account delete.<br>
+                  <strong style="color:var(--text)">Appearance</strong> — Colour theme, background style, sidebar layout.<br>
+                  <strong style="color:var(--text)">Display</strong> — Currency symbol, P&amp;L decimal places, number format, date/time format.<br>
+                  <strong style="color:var(--text)">Trading</strong> — Default contract multiplier, custom futures multiplier table, include fees toggle.<br>
+                  <strong style="color:var(--text)">Data</strong> — Export/import JSON backup, install as PWA, storage stats, clear data, delete all profiles.
+                </div>
+              </div>
+            </div>
+
+            <!-- P&L and Fees -->
+            <div class="card" style="margin-bottom:14px">
+              <div class="sec">💰 How P&L and Fees Work</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                All P&amp;L figures — account balance, totals, win rate, equity curve, and every chart — are calculated as <strong style="color:var(--text)">net P&amp;L</strong>: gross trade profit/loss minus any commission or fee you enter on that trade.<br><br>
+                <strong style="color:var(--text)">To log a fee:</strong> when adding or editing a trade, enter the commission amount in the <strong>Commission / Fees ($)</strong> field on the Details tab. Each trade has its own fee field — useful for brokers that charge per lot or per side.<br><br>
+                <strong style="color:var(--text)">To toggle fee deduction:</strong> go to <strong>Settings → Trading → Include Commission in P&amp;L</strong>. When off, all figures show gross P&amp;L. The setting takes effect immediately and can be toggled at any time.
+              </div>
+            </div>
+
+            <!-- Privacy & Backup -->
+            <div class="card" style="margin-bottom:14px">
+              <div class="sec">🔒 Privacy & Data Storage</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                TradeEdge Pro stores all data in your browser's <strong style="color:var(--text)">localStorage</strong> — on your device, in your browser, with no server involved. Nothing is transmitted or stored externally. No one else can access your data.<br><br>
+                <strong style="color:var(--red)">⚠️ Clearing your browser's site data or cache will delete your trades.</strong> To protect your data, go to <strong>Settings → Data → Export Full Journal (JSON)</strong> and save the file regularly. You can restore it using <strong>Import JSON Backup</strong> on the same page.<br><br>
+                <strong style="color:var(--text)">Multiple users:</strong> each username is completely isolated — different traders on the same device cannot access each other's data. Passwords are hashed with SHA-256.<br><br>
+                <strong style="color:var(--text)">Install as PWA</strong> (Settings → Data → App Installation) for a more stable storage environment, offline access, and a native app experience on any device.
+              </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="card">
+              <div class="sec">⌨️ Tips & Shortcuts</div>
+              <div style="display:flex;flex-direction:column;gap:7px;font-size:12px;color:var(--text2)">
+                <div style="display:flex;gap:10px;align-items:center"><code style="background:var(--bg3);padding:2px 9px;border-radius:5px;font-size:11px;min-width:90px;text-align:center;flex-shrink:0">Enter ↵</code><span>Move to the next field in login, register, and all trade forms — no mouse required.</span></div>
+                <div style="display:flex;gap:10px;align-items:center"><code style="background:var(--bg3);padding:2px 9px;border-radius:5px;font-size:11px;min-width:90px;text-align:center;flex-shrink:0">Today btn</code><span>On the Calendar, the Today button instantly jumps back to the current month and highlights today.</span></div>
+                <div style="display:flex;gap:10px;align-items:center"><code style="background:var(--bg3);padding:2px 9px;border-radius:5px;font-size:11px;min-width:90px;text-align:center;flex-shrink:0">Hover</code><span>Hover checklist items to reveal the ✎ edit button. Hover trade cards in the log to see action icons.</span></div>
+                <div style="display:flex;gap:10px;align-items:center"><code style="background:var(--bg3);padding:2px 9px;border-radius:5px;font-size:11px;min-width:90px;text-align:center;flex-shrink:0">P&L Preview</code><span>In the Add Trade wizard and Calendar modal, P&L updates live as you type entry and exit prices.</span></div>
+                <div style="display:flex;gap:10px;align-items:center"><code style="background:var(--bg3);padding:2px 9px;border-radius:5px;font-size:11px;min-width:90px;text-align:center;flex-shrink:0">Auto-save</code><span>Your data auto-saves every 30 seconds and on every page navigation. Manual save is not required.</span></div>
+                <div style="display:flex;gap:10px;align-items:center"><code style="background:var(--bg3);padding:2px 9px;border-radius:5px;font-size:11px;min-width:90px;text-align:center;flex-shrink:0">DO NOT TRADE</code><span>On the Home page, if you select 2 or more negative emotions, a full-screen DO NOT TRADE alarm fires automatically.</span></div>
+                <div style="display:flex;gap:10px;align-items:center"><code style="background:var(--bg3);padding:2px 9px;border-radius:5px;font-size:11px;min-width:90px;text-align:center;flex-shrink:0">Setup Manager</code><span>In the Add Trade wizard (Step 2), click ⚙ Manage Setups to add, edit, reorder, or delete your custom setup types.</span></div>
+                <div style="display:flex;gap:10px;align-items:center"><code style="background:var(--bg3);padding:2px 9px;border-radius:5px;font-size:11px;min-width:90px;text-align:center;flex-shrink:0">Multipliers</code><span>For futures contracts, set the correct contract multiplier (e.g. 0.50 for MYM, 5.00 for MES) in Settings → Trading or per-trade in the Details step.</span></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
       </div>
 
     </div><!-- /content-area -->
@@ -1995,6 +2168,265 @@ tr:hover td{background:rgba(255,255,255,.015)}
     </div>
   </div><!-- /main -->
   <!-- ════════════ MODALS ════════════ -->
+
+  <!-- How to Use / Onboarding Modal -->
+  <div class="modal-bg" id="howto-modal">
+    <div class="modal" style="max-width:580px;max-height:85vh;display:flex;flex-direction:column">
+      <div class="modal-handle"></div>
+      <div class="modal-title" style="flex-shrink:0">
+        <span>📈 Getting Started with TradeEdge Pro</span>
+        <button class="modal-close" onclick="closeModal('howto-modal')">×</button>
+      </div>
+
+      <!-- Step tabs -->
+      <div style="display:flex;gap:2px;background:var(--bg3);border-radius:8px;padding:3px;margin-bottom:16px;border:1px solid var(--bdr);flex-shrink:0;overflow-x:auto" id="howto-tab-row">
+        <div class="tab active" style="flex:1;text-align:center;font-size:11px;white-space:nowrap" onclick="hwTab(0,this)">👋 Start</div>
+        <div class="tab" style="flex:1;text-align:center;font-size:11px;white-space:nowrap" onclick="hwTab(1,this)">📋 Trades</div>
+        <div class="tab" style="flex:1;text-align:center;font-size:11px;white-space:nowrap" onclick="hwTab(2,this)">📅 Calendar</div>
+        <div class="tab" style="flex:1;text-align:center;font-size:11px;white-space:nowrap" onclick="hwTab(3,this)">📊 Analytics</div>
+        <div class="tab" style="flex:1;text-align:center;font-size:11px;white-space:nowrap" onclick="hwTab(4,this)">⚙️ Features</div>
+        <div class="tab" style="flex:1;text-align:center;font-size:11px;white-space:nowrap" onclick="hwTab(5,this)">🔒 Data</div>
+      </div>
+
+      <!-- Scrollable content area -->
+      <div style="overflow-y:auto;flex:1;padding-right:4px" id="howto-content">
+
+        <!-- Step 0: Welcome / Quick Start -->
+        <div id="hwp-0">
+          <div style="text-align:center;padding:8px 0 18px">
+            <div style="font-size:52px;margin-bottom:10px">📈</div>
+            <div style="font-family:var(--head);font-size:18px;font-weight:700;margin-bottom:8px">Welcome to TradeEdge Pro</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.7;max-width:440px;margin:0 auto 16px">Your private, offline-first trading journal. Everything is stored on <strong style="color:var(--text)">your device only</strong> — no cloud, no subscriptions, no one else can see your trades.</div>
+            <div style="display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:center">
+              <span style="background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);color:var(--cyan);border-radius:20px;padding:4px 12px;font-size:11px">🔒 100% Private</span>
+              <span style="background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.25);color:var(--green);border-radius:20px;padding:4px 12px;font-size:11px">📴 Works Offline</span>
+              <span style="background:rgba(179,136,255,.1);border:1px solid rgba(179,136,255,.25);color:var(--purple);border-radius:20px;padding:4px 12px;font-size:11px">📱 Installable App</span>
+            </div>
+          </div>
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text3);margin-bottom:10px">🚀 Get started in 4 steps</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;gap:12px;background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,212,255,.15);border:1.5px solid var(--cyan);color:var(--cyan);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+              <div><div style="font-size:13px;font-weight:600;margin-bottom:3px">Create your trading account</div><div style="font-size:12px;color:var(--text2);line-height:1.6">Go to <strong>Settings → Account → Trading Accounts</strong>. Set your <strong>starting balance</strong>, broker name, and account type (Live, Demo, or Prop). This is the foundation all P&L and balance calculations build on. You can add multiple accounts and switch between them anytime.</div></div>
+            </div>
+            <div style="display:flex;gap:12px;background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,212,255,.15);border:1.5px solid var(--cyan);color:var(--cyan);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+              <div><div style="font-size:13px;font-weight:600;margin-bottom:3px">Log your first trade</div><div style="font-size:12px;color:var(--text2);line-height:1.6">Click the <strong>➕</strong> icon in the sidebar to open the 5-step trade wizard, or click any day on the <strong>Calendar</strong> and tap <strong>+ Log Trade</strong>. Enter symbol, direction (Long/Short), entry price, exit price, and quantity. Net P&L (after any fees you enter) calculates automatically.</div></div>
+            </div>
+            <div style="display:flex;gap:12px;background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,212,255,.15);border:1.5px solid var(--cyan);color:var(--cyan);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+              <div><div style="font-size:13px;font-weight:600;margin-bottom:3px">Use your checklists daily</div><div style="font-size:12px;color:var(--text2);line-height:1.6">On the <strong>Calendar</strong>, click today then hit <strong>🌅 Pre-Session</strong> to run your morning prep checklist, and <strong>📋 Pre-Trade</strong> before each entry to validate your setup. Both checklists are fully customisable in the <strong>Checklist</strong> page.</div></div>
+            </div>
+            <div style="display:flex;gap:12px;background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,212,255,.15);border:1.5px solid var(--cyan);color:var(--cyan);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
+              <div><div style="font-size:13px;font-weight:600;margin-bottom:3px">Review your performance</div><div style="font-size:12px;color:var(--text2);line-height:1.6">The <strong>Dashboard</strong> shows your live balance, equity curve, and key stats. <strong>Analytics</strong> breaks down your P&L by time of day, day of week, and asset class. Use these to discover your real edge — and your blind spots.</div></div>
+            </div>
+          </div>
+          <div style="background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:12px;margin-top:14px;font-size:12px;color:var(--text2);line-height:1.7">
+            💡 <strong style="color:var(--text)">Tip:</strong> Use the tabs above to explore each section of the app. You can re-open this guide anytime from <strong>Settings → How to Use</strong> or from the ❓ menu in your profile dropdown.
+          </div>
+        </div>
+
+        <!-- Step 1: Trades -->
+        <div id="hwp-1" style="display:none">
+          <div style="font-family:var(--head);font-size:15px;font-weight:700;margin-bottom:14px">📋 Logging & Managing Trades</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">➕ Adding a Trade — 5-Step Wizard</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Click the <strong>➕</strong> icon in the sidebar to open the wizard:<br>
+              <strong>Step 1 Details</strong> — Symbol, asset class, direction (Long/Short), entry/exit prices, quantity, multiplier, date/time, session, and commission/fee.<br>
+              <strong>Step 2 Setup</strong> — Select the setup type (e.g. Breakout, VWAP), market conditions, timeframe, and describe your edge for this trade.<br>
+              <strong>Step 3 Tags</strong> — Tag the trade with emotion, strategy, or mistake labels for later filtering and analysis.<br>
+              <strong>Step 4 Media</strong> — Attach chart screenshots or video links as evidence of your entry/exit.<br>
+              <strong>Step 5 Notes</strong> — Write pre-trade thoughts, in-trade observations, and a post-trade review. Only symbol + entry + exit are required.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">📋 Trade Log</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">The <strong>Trade Log</strong> (sidebar 📋 icon) lists every trade. Use the filter bar to narrow by date range, symbol, direction, setup type, win/loss, or tag. Click any row to expand it and see full notes, media, and setup details. Use the <strong>✎ edit</strong> button to update any field.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">📥 Importing from CSV</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Go to <strong>Import CSV</strong> in the sidebar. Minimum required columns: <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">date, symbol, direction, entry, exit</code><br>Optional columns: <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">quantity, contract_multiplier, fee, setup, tags, notes, time, asset_class</code><br>Tags must be pipe-separated: <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">breakout|trend|fomo</code>. Comma and semicolon delimiters are both supported. Imported trades appear immediately in the Trade Log.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">💰 Fees & Net P&L</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Enter your broker commission in the <strong>Commission / Fees ($)</strong> field when adding or editing a trade. Every P&L figure in the app — balance, totals, win rate, equity curve — automatically subtracts fees. You can disable this globally in <strong>Settings → Trading → Include Commission in P&L</strong>.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">📝 Missed Trades</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">In the sidebar, <strong>Missed Trades</strong> lets you log setups you saw but didn't take — with estimated P&L, the reason you skipped, and a lesson field. The <strong>Analytics tab</strong> shows your total missed opportunity over time and which setups you most often avoid.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Calendar -->
+        <div id="hwp-2" style="display:none">
+          <div style="font-family:var(--head);font-size:15px;font-weight:700;margin-bottom:14px">📅 Using the Calendar</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">📆 Day Side Panel</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Click any day to open the side panel. It shows the day's net P&L, trade count, checklist progress bars, and every trade logged. Each trade card has a <strong>✎ Edit</strong> button (opens the full edit modal) and a <strong>✕ Delete</strong> button. <strong>🗑 Clear All</strong> removes all trades for that day at once.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">🌅 Pre-Session Checklist</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Run this <em>before your trading session begins</em>. Click a day → <strong>🌅 Pre-Session</strong>. Work through your morning routine items (review economic calendar, identify S/R levels, assess emotional state, etc.). Items come from your <strong>Checklist</strong> page and are fully editable. Once saved, the side panel shows a <span style="color:var(--green)">green</span> progress bar and count.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">📋 Pre-Trade Checklist</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Run this <em>before entering each trade</em> to validate your setup. Click a day → <strong>📋 Pre-Trade</strong>. Confirm your setup matches strategy, stop-loss is defined, R:R is acceptable, and you're not trading out of FOMO or revenge. Saved independently from Pre-Session. Shows a <span style="color:var(--cyan)">cyan</span> bar in the side panel.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">🎨 Cell Colour Guide</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                <span style="color:var(--green)">■ Bright green</span> — large net profitable day<br>
+                <span style="color:var(--green);opacity:.5">■ Faint green</span> — small net profit day<br>
+                <span style="color:var(--red)">■ Bright red</span> — large net losing day<br>
+                <span style="color:var(--red);opacity:.5">■ Faint red</span> — small net loss day<br>
+                <strong>★ Big win / big loss</strong> — badge on your largest sessions of the month<br>
+                <strong>✓ chk</strong> — at least one checklist completed for that day
+              </div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">📊 Calendar Stats Panel</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Below the calendar grid you'll find a <strong>monthly summary</strong> (total trades, net P&L, win rate, profit factor, best day), a <strong>daily P&L sparkline</strong>, a <strong>day-of-week breakdown</strong>, and a <strong>weekly P&L bar</strong> — all updating live as you add trades.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Analytics -->
+        <div id="hwp-3" style="display:none">
+          <div style="font-family:var(--head);font-size:15px;font-weight:700;margin-bottom:14px">📊 Reading Your Analytics</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">🏠 Dashboard KPIs</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">
+                <strong>Balance</strong> = starting balance + all-time net P&L (fees deducted).<br>
+                <strong>Total P&L</strong> = sum of all net trades across all time.<br>
+                <strong>Profitability %</strong> = total net P&L ÷ starting balance × 100.<br>
+                <strong>Win Rate</strong> = % of trades where net P&L &gt; 0.<br>
+                <strong>Profit Factor</strong> = gross winning P&L ÷ gross losing P&L. Above 1.5 is solid; above 2.0 is excellent.<br>
+                <strong>Avg Win / Avg Loss</strong> — compare these to see if your winners outsize your losers.
+              </div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">📈 Equity Curve</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Plots your running account balance after every single trade. A steady upward slope is the goal. Drawdown dips show when your approach changed — look at what was different in those stretches (time of day, setup type, emotional state) to identify patterns.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">⏰ Time of Day Analysis</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Found in <strong>Analytics → Charts</strong>. Shows net P&L aggregated by hour of day. If you consistently lose during a specific hour (e.g. 12:00–13:00 lunchtime chop), this chart makes it obvious. Consider avoiding those windows entirely.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">📅 Day of Week Breakdown</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Shows which days of the week generate the most P&L. Also visible on the calendar monthly stats panel. If Mondays or Fridays are consistently your worst days, the data will tell you — and you can act on it.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">📦 Asset Class Breakdown</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">The <strong>Asset</strong> tab in Analytics shows P&L, win rate, and average trade result split by Futures, Forex, Stocks, and Crypto. If you're profitable in Futures but losing in Forex, you now have data to focus your effort.</div>
+            </div>
+            <div style="background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:12px;font-size:12px;color:var(--text2);line-height:1.7">
+              💡 <strong style="color:var(--text)">Key insight:</strong> The single most actionable use of analytics is finding the intersection of <em>when</em> and <em>what</em> you trade best. Look at time-of-day combined with your top setup types to find your highest-probability window.
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4: Features Tour -->
+        <div id="hwp-4" style="display:none">
+          <div style="font-family:var(--head);font-size:15px;font-weight:700;margin-bottom:14px">⚙️ All Features at a Glance</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--bdr)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:5px">🏠 Home</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.7">Live clock, mood tracker, DO NOT TRADE alarm (triggers on 2+ negative emotions), quick stats strip, and recent trades.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--bdr)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:5px">📊 Dashboard</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.7">Balance, total net P&L, win rate, profit factor. Equity curve chart and asset class breakdown. Switch accounts at the top.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--bdr)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:5px">📅 Calendar</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.7">Monthly/weekly view with trade and checklist overlays. Log trades, run pre-session and pre-trade checklists, edit/delete from the day panel.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--bdr)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:5px">📈 Analytics</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.7">P&L bar chart, win/loss doughnut, time-of-day chart, day-of-week chart. Stats: profit factor, Sharpe, max drawdown, streaks. Asset breakdown tab.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--bdr)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:5px">📋 Trade Log</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.7">Full searchable, filterable trade table. Expand rows for notes, media, setup detail. Edit any field across 5 tabs. Export to CSV.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--bdr)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:5px">✅ Checklist</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.7">Two separate lists: Pre-Session and Pre-Trade. Add, edit, delete, and drag-to-reorder items. Category badges. Celebration when all items checked.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--bdr)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:5px">📝 Missed Trades</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.7">Log setups you skipped. Record symbol, estimated P&L, reason, and lesson. Analytics tab shows opportunity cost and FOMO patterns over time.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--bdr)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:5px">📄 Trading Plan</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.7">Document your strategy, risk rules, and goals. Track goal progress against real trade data. Linked Trades tab reviews rule compliance per trade.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--bdr)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:5px">🔔 Alerts</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.7">Set price alerts and rule reminders. View triggered alerts in the sidebar. Alerts can be toggled on/off at any time.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--bdr)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:5px">🏷️ Tags</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.7">Custom tag library with categories: Strategy, Emotion, Mistake, Market, and Custom. Colour-coded. Used across trade log and analytics filtering.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--bdr)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:5px">📥 CSV Import</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.7">Bulk import trades from broker CSV exports. Auto-detects comma or semicolon delimiters. Imported trades go directly to your active account.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--bdr)">
+              <div style="font-size:12px;font-weight:600;margin-bottom:5px">⚙️ Settings</div>
+              <div style="font-size:11px;color:var(--text2);line-height:1.7">6 tabs: Account (name, password, accounts), Appearance (themes), Display (currency, format), Trading (multipliers, fees), Data (backup/restore, PWA), How to Use.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5: Privacy & Data -->
+        <div id="hwp-5" style="display:none">
+          <div style="font-family:var(--head);font-size:15px;font-weight:700;margin-bottom:14px">🔒 Privacy, Data & Backup</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:13px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--cyan)">Your data never leaves your device</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">TradeEdge Pro stores everything in your browser's <strong>localStorage</strong>. There is no server, no cloud sync, and no external connection. No one — including the developers — can access your journal. Your trades are yours alone.</div>
+            </div>
+            <div style="background:rgba(255,193,7,.06);border:1px solid rgba(255,193,7,.25);border-radius:10px;padding:13px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--gold)">⚠️ Back up your data regularly</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Clearing your browser's cache or site data <strong>will delete your trades</strong>. This is the most common cause of data loss. To back up: <strong>Settings → Data → Export Full Journal (JSON)</strong>. Save this file to your computer, cloud drive, or email it to yourself. To restore, use <strong>Import JSON Backup</strong> on the same page.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">👥 Multiple Users on One Device</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Each username has completely isolated data. Multiple traders can share a device — each sees only their own trades, settings, and checklists. Passwords are hashed with SHA-256 and never stored in plain text. To manage accounts: <strong>Settings → Account → Delete Account</strong> or <strong>Settings → Data → Delete All Profiles</strong>.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">📱 Install as an App (PWA)</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Install TradeEdge Pro to your home screen via <strong>Settings → Data → App Installation</strong> or click the install icon in your browser's address bar. This gives you: offline access, a more stable storage environment, and a native app experience on iOS, Android, and desktop. Recommended for daily use.</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">🔑 Changing or Recovering Your Password</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Go to <strong>Settings → Account → Change Password</strong>. You'll need your current password to confirm. If you forget your password, there is no recovery — data is local only and there's no reset email. <strong>Write your password down somewhere safe.</strong></div>
+            </div>
+          </div>
+          <div style="margin-top:14px;text-align:center">
+            <button class="btn btn-c" style="justify-content:center;padding:10px 28px;font-size:13px" onclick="closeModal('howto-modal');showNotif('All set! 🚀','Head to Settings to configure your account','success')">
+              Let's go! 🚀
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /scroll area -->
+
+      <!-- Footer nav -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;border-top:1px solid var(--bdr);margin-top:10px;flex-shrink:0">
+        <button class="btn btn-g" id="hwto-prev" onclick="hwNav(-1)" style="display:none">← Back</button>
+        <div style="font-size:11px;color:var(--text3)" id="hwto-counter">Step 1 of 5</div>
+        <button class="btn btn-c" id="hwto-next" onclick="hwNav(1)">Next →</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Edit Trade Modal -->
   <div class="modal-bg" id="edit-trade-modal">
@@ -4434,7 +4866,7 @@ function sTb(tab, el) {
   settingsTab = tab;
   document.querySelectorAll('#pg-settings .tab').forEach(t => t.classList.remove('active'));
   if(el) el.classList.add('active');
-  ['account','appearance','display','trading','notifications','data'].forEach(s => {
+  ['account','appearance','display','trading','notifications','data','howto'].forEach(s => {
     const el = document.getElementById('st-'+s);
     if(el) el.style.display = s===tab ? 'block' : 'none';
   });
@@ -6791,6 +7223,8 @@ async function doRegister() {
     currentUser = { username, displayName: username };
     applyUserData(newData);
     enterApp();
+    // Show How to Use modal for brand-new accounts
+    setTimeout(() => openHowToModal(), 800);
   }, 1200);
 }
 
@@ -7646,6 +8080,57 @@ function doDeleteAllProfiles() {
     document.getElementById('reg-user')?.focus();
   }, 200);
 }
+
+
+// ═══════════════════════════════════════════════════
+// HOW TO USE — ONBOARDING MODAL
+// ═══════════════════════════════════════════════════
+
+let _hwStep = 0;
+const HW_STEPS = 6;
+
+function openHowToModal() {
+  _hwStep = 0;
+  hwRender();
+  document.getElementById('howto-modal').classList.add('open');
+}
+
+function hwTab(idx, el) {
+  _hwStep = idx;
+  hwRender();
+}
+
+function hwNav(dir) {
+  _hwStep = Math.max(0, Math.min(HW_STEPS - 1, _hwStep + dir));
+  hwRender();
+}
+
+function hwRender() {
+  // Show correct panel
+  for(let i = 0; i < HW_STEPS; i++) {
+    const p = document.getElementById('hwp-' + i);
+    if(p) p.style.display = i === _hwStep ? 'block' : 'none';
+  }
+  // Sync tab highlights
+  const tabs = document.querySelectorAll('#howto-tab-row .tab');
+  tabs.forEach((t, i) => t.classList.toggle('active', i === _hwStep));
+  // Footer
+  const prev = document.getElementById('hwto-prev');
+  const next = document.getElementById('hwto-next');
+  const ctr  = document.getElementById('hwto-counter');
+  if(prev) prev.style.display = _hwStep > 0 ? 'inline-flex' : 'none';
+  if(next) {
+    next.textContent = _hwStep === HW_STEPS - 1 ? "Let's go! 🚀" : 'Next →';
+    next.onclick = _hwStep === HW_STEPS - 1
+      ? () => { closeModal('howto-modal'); showNotif("All set!", "Head to Settings to configure your account 🚀", 'success'); }
+      : () => hwNav(1);
+  }
+  if(ctr) ctr.textContent = 'Step ' + (_hwStep + 1) + ' of ' + HW_STEPS;
+  // Scroll content back to top on step change
+  const sc = document.getElementById('howto-content');
+  if(sc) sc.scrollTop = 0;
+}
+
 
 function showNotif(title,msg,type='info'){const stack=document.getElementById('notif-stack');if(!stack)return;const id='n'+nid++;const tc={info:'',danger:'nd',success:'ns',warn:'nw'};const div=document.createElement('div');div.className=`notif ${tc[type]||''}`;div.id=id;div.innerHTML=`<div style="flex:1"><div style="font-size:12px;font-weight:600;margin-bottom:2px">${title}</div>${msg?`<div style="font-size:11px;color:var(--text2);line-height:1.4">${msg}</div>`:''}</div><div style="color:var(--text3);font-size:14px;cursor:pointer;flex-shrink:0" onclick="document.getElementById('${id}').remove()">×</div>`;stack.appendChild(div);setTimeout(()=>{const e=document.getElementById(id);if(e){e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(()=>{const x=document.getElementById(id);if(x)x.remove();},300);}},6000);}
 
