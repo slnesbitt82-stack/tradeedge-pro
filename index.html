@@ -1090,6 +1090,8 @@ tr:hover td{background:rgba(255,255,255,.015)}
             <div class="card"><div class="sec">Futures</div><div id="as-fut"></div></div>
             <div class="card"><div class="sec">Forex</div><div id="as-fx"></div></div>
             <div class="card"><div class="sec">Stocks</div><div id="as-stk"></div></div>
+            <div class="card"><div class="sec">Crypto</div><div id="as-cry"></div></div>
+            <div class="card"><div class="sec">Options</div><div id="as-opt"></div></div>
           </div>
         </div>
       </div>
@@ -1097,7 +1099,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
       <!-- ═══ TRADE LOG ═══ -->
       <div class="page" id="pg-trades">
         <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
-          <select id="f-asset" onchange="renderTrades()" style="width:120px"><option value="">All Assets</option><option>Futures</option><option>Forex</option><option>Stocks</option></select>
+          <select id="f-asset" onchange="renderTrades()" style="width:120px"><option value="">All Assets</option><option>Futures</option><option>Forex</option><option>Stocks</option><option>Crypto</option><option>Options</option></select>
           <select id="f-dir" onchange="renderTrades()" style="width:105px"><option value="">All Sides</option><option>Long</option><option>Short</option></select>
           <select id="f-res" onchange="renderTrades()" style="width:105px"><option value="">All Results</option><option>Win</option><option>Loss</option></select>
           <select id="f-setup" onchange="renderTrades()" style="width:130px" id="f-setup">
@@ -1144,14 +1146,34 @@ tr:hover td{background:rgba(255,255,255,.015)}
             <div class="sec">Trade Details</div>
             <div class="g3" style="margin-bottom:10px">
               <div class="fg"><label>Symbol</label><input id="lf-sym" placeholder="MYMH6"></div>
-              <div class="fg"><label>Asset Class</label><select id="lf-asset"><option>Futures</option><option>Forex</option><option>Stocks</option></select></div>
+              <div class="fg"><label>Asset Class</label><select id="lf-asset" onchange="toggleOptionsFields('lf')"><option>Futures</option><option>Forex</option><option>Stocks</option><option>Crypto</option><option>Options</option></select></div>
               <div class="fg"><label>Direction</label><select id="lf-dir" onchange="calcLfPrev()"><option>Long</option><option>Short</option></select></div>
             </div>
+            <!-- Options-specific fields (shown only when Options selected) -->
+            <div id="lf-options-fields" style="display:none;margin-bottom:10px">
+              <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:9px;padding:12px">
+                <div style="font-size:11px;font-weight:600;color:var(--cyan);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">📋 Options Contract Details</div>
+                <div class="g3" style="margin-bottom:8px">
+                  <div class="fg"><label>Option Type</label>
+                    <select id="lf-opt-type" onchange="calcLfPrev()">
+                      <option value="Call">Call</option>
+                      <option value="Put">Put</option>
+                    </select>
+                  </div>
+                  <div class="fg"><label>Strike Price</label><input id="lf-strike" type="number" placeholder="e.g. 450.00" step="0.01" oninput="calcLfPrev()"></div>
+                  <div class="fg"><label>Expiry Date</label><input id="lf-expiry" type="date"></div>
+                </div>
+                <div class="g2">
+                  <div class="fg"><label>Underlying Symbol</label><input id="lf-underlying" type="text" placeholder="e.g. SPY, AAPL"></div>
+                  <div class="fg"><label>Shares per Contract</label><input id="lf-opt-mult" type="number" value="100" min="1" oninput="calcLfPrev()"></div>
+                </div>
+              </div>
+            </div>
             <div class="g4" style="margin-bottom:10px">
-              <div class="fg"><label>Entry</label><input id="lf-entry" type="number" placeholder="0.00" oninput="calcLfPrev()"></div>
-              <div class="fg"><label>Exit</label><input id="lf-exit" type="number" placeholder="0.00" oninput="calcLfPrev()"></div>
-              <div class="fg"><label>Qty</label><input id="lf-qty" type="number" value="1" oninput="calcLfPrev()"></div>
-              <div class="fg"><label>Multiplier</label><input id="lf-mult" type="number" value="1" step="0.01" oninput="calcLfPrev()"></div>
+              <div class="fg"><label id="lf-entry-lbl">Entry</label><input id="lf-entry" type="number" placeholder="0.00" oninput="calcLfPrev()"></div>
+              <div class="fg"><label id="lf-exit-lbl">Exit</label><input id="lf-exit" type="number" placeholder="0.00" oninput="calcLfPrev()"></div>
+              <div class="fg"><label id="lf-qty-lbl">Qty</label><input id="lf-qty" type="number" value="1" oninput="calcLfPrev()"></div>
+              <div class="fg" id="lf-mult-wrap"><label>Multiplier</label><input id="lf-mult" type="number" value="1" step="0.01" oninput="calcLfPrev()"></div>
             </div>
             <div class="g4" style="margin-bottom:8px">
               <div class="fg"><label>Stop Loss</label><input id="lf-sl" type="number" placeholder="0.00"></div>
@@ -2452,7 +2474,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
         <div class="g2" style="margin-bottom:10px">
           <div class="fg"><label>Symbol</label><input id="etm-sym" type="text"></div>
           <div class="fg"><label>Asset Class</label>
-            <select id="etm-asset"><option>Futures</option><option>Forex</option><option>Stocks</option><option>Crypto</option></select>
+            <select id="etm-asset" onchange="toggleOptionsFields('etm')"><option>Futures</option><option>Forex</option><option>Stocks</option><option>Crypto</option><option>Options</option></select>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
@@ -2478,6 +2500,26 @@ tr:hover td{background:rgba(255,255,255,.015)}
               <option>Regular Hours</option><option>Pre-Market</option><option>After Hours</option>
               <option>New York</option><option>London</option><option>Asian</option>
             </select>
+          </div>
+        </div>
+        <!-- Options-specific fields -->
+        <div id="etm-options-fields" style="display:none;margin-bottom:10px">
+          <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:9px;padding:12px">
+            <div style="font-size:11px;font-weight:600;color:var(--cyan);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">📋 Options Contract Details</div>
+            <div class="g3" style="margin-bottom:8px">
+              <div class="fg"><label>Option Type</label>
+                <select id="etm-opt-type" onchange="etmCalcPrev()">
+                  <option value="Call">Call</option>
+                  <option value="Put">Put</option>
+                </select>
+              </div>
+              <div class="fg"><label>Strike Price</label><input id="etm-strike" type="number" step="0.01" placeholder="e.g. 450.00" oninput="etmCalcPrev()"></div>
+              <div class="fg"><label>Expiry Date</label><input id="etm-expiry" type="date"></div>
+            </div>
+            <div class="g2">
+              <div class="fg"><label>Underlying Symbol</label><input id="etm-underlying" type="text" placeholder="e.g. SPY, AAPL"></div>
+              <div class="fg"><label>Shares / Contract</label><input id="etm-opt-mult" type="number" value="100" min="1" oninput="etmCalcPrev()"></div>
+            </div>
           </div>
         </div>
         <div class="fg" style="margin-bottom:10px">
@@ -2737,7 +2779,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
       <div class="g2" style="margin-bottom:10px">
         <div class="fg"><label>Symbol</label><input id="mm-sym" type="text" placeholder="e.g. MYMH6, AAPL"></div>
         <div class="fg"><label>Asset Class</label>
-          <select id="mm-asset">
+          <select id="mm-asset" onchange="toggleOptionsFields('mm')">
             <option>Futures</option><option>Forex</option><option>Stocks</option><option>Crypto</option>
           </select>
         </div>
@@ -2972,6 +3014,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
           <option value="demo">Demo — Simulated</option>
           <option value="prop">Prop Firm — Funded</option>
           <option value="paper">Paper — Practice</option>
+          <option value="options">Options — Derivatives</option>
         </select>
       </div>
       <div class="g2">
@@ -3032,8 +3075,8 @@ tr:hover td{background:rgba(255,255,255,.015)}
         <div class="g2" style="margin-bottom:10px">
           <div class="fg"><label>Symbol</label><input id="cm-sym" placeholder="e.g. MYMH6, AAPL"></div>
           <div class="fg"><label>Asset Class</label>
-            <select id="cm-asset">
-              <option>Futures</option><option>Forex</option><option>Stocks</option><option>Crypto</option>
+            <select id="cm-asset" onchange="toggleOptionsFields('cm')">
+              <option>Futures</option><option>Forex</option><option>Stocks</option><option>Crypto</option><option>Options</option>
             </select>
           </div>
         </div>
@@ -3041,12 +3084,32 @@ tr:hover td{background:rgba(255,255,255,.015)}
           <div class="fg"><label>Direction</label>
             <select id="cm-dir" onchange="calcCmPrev()"><option>Long</option><option>Short</option></select>
           </div>
-          <div class="fg"><label>Qty</label><input id="cm-qty" type="number" value="1" oninput="calcCmPrev()"></div>
+          <div class="fg"><label id="cm-qty-lbl">Qty</label><input id="cm-qty" type="number" value="1" oninput="calcCmPrev()"></div>
           <div class="fg"><label>Multiplier</label><input id="cm-mult" type="number" value="1" step="0.01" oninput="calcCmPrev()"></div>
         </div>
+        <!-- Options fields (shown only when Options asset selected) -->
+        <div id="cm-options-fields" style="display:none;margin-bottom:10px">
+          <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:9px;padding:10px">
+            <div style="font-size:10px;font-weight:600;color:var(--cyan);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📋 Options Details</div>
+            <div class="g3" style="margin-bottom:8px">
+              <div class="fg"><label>Type</label>
+                <select id="cm-opt-type" onchange="calcCmPrev()">
+                  <option value="Call">Call</option>
+                  <option value="Put">Put</option>
+                </select>
+              </div>
+              <div class="fg"><label>Strike</label><input id="cm-strike" type="number" step="0.01" placeholder="450.00" oninput="calcCmPrev()"></div>
+              <div class="fg"><label>Expiry</label><input id="cm-expiry" type="date"></div>
+            </div>
+            <div class="g2">
+              <div class="fg"><label>Underlying</label><input id="cm-underlying" type="text" placeholder="SPY, AAPL"></div>
+              <div class="fg"><label>Shares/Contract</label><input id="cm-opt-mult" type="number" value="100" oninput="calcCmPrev()"></div>
+            </div>
+          </div>
+        </div>
         <div class="g2" style="margin-bottom:10px">
-          <div class="fg"><label>Entry Price</label><input id="cm-entry" type="number" placeholder="0.00" oninput="calcCmPrev()"></div>
-          <div class="fg"><label>Exit Price</label><input id="cm-exit" type="number" placeholder="0.00" oninput="calcCmPrev()"></div>
+          <div class="fg"><label id="cm-entry-lbl">Entry Price</label><input id="cm-entry" type="number" placeholder="0.00" oninput="calcCmPrev()"></div>
+          <div class="fg"><label id="cm-exit-lbl">Exit Price</label><input id="cm-exit" type="number" placeholder="0.00" oninput="calcCmPrev()"></div>
         </div>
         <div class="g2" style="margin-bottom:10px">
           <div class="fg"><label>Entry Time</label><input id="cm-time" type="time"></div>
@@ -3175,7 +3238,7 @@ const PAGE_BADGES={dashboard:'Live',analytics:'Insights'};
 // MULTI-ACCOUNT SYSTEM
 // ═══════════════════════════════════════
 const ACC_COLORS=['#00d4ff','#00e676','#b388ff','#ffc107','#ff9800','#f06292','#29b6f6','#c6ff00','#ff4757','#64ffda'];
-const ACC_TYPE_LABELS={live:'Live',demo:'Demo',prop:'Prop Firm',paper:'Paper'};
+const ACC_TYPE_LABELS={live:'Live',demo:'Demo',prop:'Prop Firm',paper:'Paper',options:'Options'};
 
 let accounts=[
   {id:'acc-1',name:'Main Futures',broker:'Tradovate',type:'live',balance:50000,currency:'$',lossLimit:500,profitTarget:1000,color:'#00d4ff',createdAt:'2025-01-01'},
@@ -3240,6 +3303,19 @@ function priceDiff(a,b){
   return(Math.round(a*scale)-Math.round(b*scale))/scale;
 }
 function P(t){
+  if(t.asset==='Options'){
+    // Options P&L = (exitPremium - entryPremium) × contracts × multiplier (default 100)
+    // Long  (bought call/put): profit when premium rises
+    // Short (written call/put): profit when premium falls
+    const entryPremium = t.entry || 0;   // premium per share at open
+    const exitPremium  = t.exit  || 0;   // premium per share at close
+    const contracts    = t.qty   || 1;   // number of contracts
+    const mult         = t.mult  || 100; // shares per contract (standard = 100)
+    const pnlPerShare  = t.dir==='Long'
+      ? priceDiff(exitPremium, entryPremium)
+      : priceDiff(entryPremium, exitPremium);
+    return parseFloat((pnlPerShare * contracts * mult).toFixed(6));
+  }
   const diff=t.dir==='Long'?priceDiff(t.exit,t.entry):priceDiff(t.entry,t.exit);
   const qty=t.qty||1;
   const mult=t.mult||1;
@@ -3608,7 +3684,7 @@ function initDashboard(){
   document.getElementById('db-al').textContent='-$'+avgL.toFixed(2);
   document.getElementById('db-pf').textContent=pf;
   const ab=document.getElementById('db-asset');ab.innerHTML='';
-  ['Futures','Forex','Stocks'].forEach(a=>{
+  ['Futures','Forex','Stocks','Crypto','Options'].forEach(a=>{
     const at=getAccountTrades().filter(t=>t.asset===a);
     const ap=Math.round(at.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
     ab.innerHTML+=`<div class="mr"><div><div style="font-size:12px;font-weight:500">${a}</div><div style="font-size:10px;color:var(--text3)">${at.length} trades · ${wr(at)}% WR</div></div><div style="font-family:var(--mono);font-size:12px;${ap>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(ap)}</div></div>`;
@@ -3957,17 +4033,24 @@ function saveCmTrade(){
   if(!sym){showNotif('Missing symbol','Enter a symbol to save the trade','danger');return;}
   if(!en||!ex){showNotif('Missing prices','Enter both entry and exit prices','danger');return;}
   const selectedTagNames=tagLibrary.filter(t=>calSelTags.has(t.id)).map(t=>t.name.toLowerCase());
+  const _cmAsset=document.getElementById('cm-asset').value;
+  const _cmIsOpt=_cmAsset==='Options';
   const newTrade={
     id:Date.now(),
     accountId:activeAccountId,
     date:calLogDate,
     time:document.getElementById('cm-time')?.value||new Date().toTimeString().slice(0,5),
     symbol:sym,
-    asset:document.getElementById('cm-asset').value,
+    asset:_cmAsset,
     dir:document.getElementById('cm-dir').value,
     entry:en,exit:ex,
     qty:parseFloat(document.getElementById('cm-qty').value)||1,
-    mult:parseFloat(document.getElementById('cm-mult').value)||1,
+    mult:_cmIsOpt?(parseFloat(document.getElementById('cm-opt-mult').value)||100):(parseFloat(document.getElementById('cm-mult').value)||1),
+    fee:0,
+    optionType:_cmIsOpt?(document.getElementById('cm-opt-type').value||'Call'):undefined,
+    strike:_cmIsOpt?parseFloat(document.getElementById('cm-strike').value||0):undefined,
+    expiry:_cmIsOpt?(document.getElementById('cm-expiry').value||''):undefined,
+    underlying:_cmIsOpt?(document.getElementById('cm-underlying').value.trim()||''):undefined,
     tags:selectedTagNames,
     setup:calSelSetup||'',
     notes:document.getElementById('cm-notes')?.value||'',
@@ -3994,6 +4077,77 @@ function saveCmChk(type){
   renderCal();
   if(calSel===calLogDate)renderCalSide(calLogDate);
   showNotif(done===total?'Checklist complete! ✓':'Checklist saved',`${done}/${total} items — ${type==='session'?'Pre-Session':'Pre-Trade'} for ${calLogDate}`,(done===total?'success':'info'));
+}
+
+// ═══════════════════════════════════════
+// OPTIONS TRADE HELPERS
+// ═══════════════════════════════════════
+
+// Show/hide options-specific fields and update field labels when asset changes
+function toggleOptionsFields(prefix){
+  const assetEl = document.getElementById(prefix+'-asset');
+  if(!assetEl) return;
+  const isOpt = assetEl.value === 'Options';
+  const fields = document.getElementById(prefix+'-options-fields');
+  if(fields) fields.style.display = isOpt ? 'block' : 'none';
+
+  // Update labels and multiplier defaults for Add Trade wizard (lf-) and Calendar (cm-)
+  if(prefix === 'lf'){
+    const entLbl = document.getElementById('lf-entry-lbl');
+    const exLbl  = document.getElementById('lf-exit-lbl');
+    const qtyLbl = document.getElementById('lf-qty-lbl');
+    const mWrap  = document.getElementById('lf-mult-wrap');
+    if(entLbl) entLbl.textContent = isOpt ? 'Entry Premium ($/share)' : 'Entry';
+    if(exLbl)  exLbl.textContent  = isOpt ? 'Exit Premium ($/share)'  : 'Exit';
+    if(qtyLbl) qtyLbl.textContent = isOpt ? 'Contracts' : 'Qty';
+    // Hide multiplier row for options (uses opt-mult instead)
+    if(mWrap) mWrap.style.display = isOpt ? 'none' : '';
+    // Default multiplier for options
+    const multEl = document.getElementById('lf-mult');
+    if(multEl && isOpt) multEl.value = 100;
+    calcLfPrev();
+  } else if(prefix === 'cm'){
+    const entLbl = document.getElementById('cm-entry-lbl');
+    const exLbl  = document.getElementById('cm-exit-lbl');
+    const qtyLbl = document.getElementById('cm-qty-lbl');
+    if(entLbl) entLbl.textContent = isOpt ? 'Entry Premium ($/share)' : 'Entry Price';
+    if(exLbl)  exLbl.textContent  = isOpt ? 'Exit Premium ($/share)'  : 'Exit Price';
+    if(qtyLbl) qtyLbl.textContent = isOpt ? 'Contracts' : 'Qty';
+    const multEl = document.getElementById('cm-mult');
+    if(multEl && isOpt) multEl.value = 100;
+    calcCmPrev();
+  } else if(prefix === 'etm'){
+    etmCalcPrev();
+  }
+}
+
+// Format options trade display label  e.g. "AAPL 450C 2025-04-17"
+function optLabel(t){
+  if(t.asset !== 'Options') return '';
+  const und = t.underlying || t.symbol;
+  const type = (t.optionType||'').charAt(0);  // C or P
+  const strike = t.strike ? '$'+t.strike : '';
+  const exp = t.expiry ? t.expiry.slice(5) : ''; // MM-DD
+  return und + ' ' + strike + type + (exp?' '+exp:'');
+}
+
+// Options P&L breakdown string for display in trade log detail panel
+function optPnlDetail(t){
+  if(t.asset !== 'Options') return '';
+  const contracts = t.qty || 1;
+  const mult = t.mult || 100;
+  const entPrem = t.entry || 0;
+  const exPrem  = t.exit  || 0;
+  const pnlPerShare = t.dir === 'Long'
+    ? priceDiff(exPrem, entPrem)
+    : priceDiff(entPrem, exPrem);
+  const cost  = Math.round(entPrem * contracts * mult * 100) / 100;
+  const gross = Math.round(pnlPerShare * contracts * mult * 100) / 100;
+  const pct   = entPrem > 0 ? Math.round(pnlPerShare / entPrem * 100) : 0;
+  return `${contracts} contract${contracts!==1?'s':''} × ${mult} shares × `
+       + `${t.dir==='Long'?'Long ':'Short '}${t.optionType||'Call'} | `
+       + `Cost basis: $${cost.toFixed(2)} | `
+       + `${pnlPerShare>=0?'+':''}${(pnlPerShare*100/entPrem).toFixed(1)}% per share`;
 }
 
 // ═══════════════════════════════════════
@@ -4215,7 +4369,7 @@ function renderAStats(){
   const tc={};getAccountTrades().forEach(t=>t.tags.forEach(tg=>{tc[tg]=(tc[tg]||0)+1;}));
   document.getElementById('s-tags').innerHTML=Object.entries(tc).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,v])=>`<div class="mr"><span class="tag ${['revenge-trade','fomo','stop-out'].includes(k)?'tr':'tb'}">${k}</span><span style="font-family:var(--mono);font-size:12px">${v}x</span></div>`).join('');
 }
-function renderAAsset(){['Futures','Forex','Stocks'].forEach((a,i)=>{const at=getAccountTrades().filter(t=>t.asset===a);const ap=Math.round(at.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;const ids=['as-fut','as-fx','as-stk'];document.getElementById(ids[i]).innerHTML=`<div class="mr"><span style="font-size:12px;color:var(--text2)">Trades</span><span style="font-family:var(--mono);font-size:12px">${at.length}</span></div><div class="mr"><span style="font-size:12px;color:var(--text2)">P&L</span><span style="font-family:var(--mono);font-size:12px;${ap>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(ap)}</span></div><div class="mr"><span style="font-size:12px;color:var(--text2)">Win Rate</span><span style="font-family:var(--mono);font-size:12px">${wr(at)}%</span></div><div class="mr"><span style="font-size:12px;color:var(--text2)">Avg/Trade</span><span style="font-family:var(--mono);font-size:12px">${at.length?fdSum(ap/at.length):'—'}</span></div>`;});}
+function renderAAsset(){['Futures','Forex','Stocks','Crypto','Options'].forEach((a,i)=>{const at=getAccountTrades().filter(t=>t.asset===a);const ap=Math.round(at.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;const ids=['as-fut','as-fx','as-stk','as-cry','as-opt'];document.getElementById(ids[i]).innerHTML=`<div class="mr"><span style="font-size:12px;color:var(--text2)">Trades</span><span style="font-family:var(--mono);font-size:12px">${at.length}</span></div><div class="mr"><span style="font-size:12px;color:var(--text2)">P&L</span><span style="font-family:var(--mono);font-size:12px;${ap>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(ap)}</span></div><div class="mr"><span style="font-size:12px;color:var(--text2)">Win Rate</span><span style="font-family:var(--mono);font-size:12px">${wr(at)}%</span></div><div class="mr"><span style="font-size:12px;color:var(--text2)">Avg/Trade</span><span style="font-family:var(--mono);font-size:12px">${at.length?fdSum(ap/at.length):'—'}</span></div>`;});}
 
 // ═══════════════════════════════════════
 // TRADE LOG
@@ -4368,7 +4522,24 @@ function renderTradeDetailPanel(t){
           ${fee?`<div class="tdp-field"><div class="tdp-field-label">Net P&L (after fees)</div><div class="tdp-field-val mono ${netP>=0?'pos':'neg'}">${fdSum(netP)}</div></div>`:''}
           ${t.sl?`<div class="tdp-field"><div class="tdp-field-label">Stop Loss</div><div class="tdp-field-val mono neg">${t.sl}</div></div>`:''}
           ${t.tp?`<div class="tdp-field"><div class="tdp-field-label">Take Profit</div><div class="tdp-field-val mono pos">${t.tp}</div></div>`:''}
-          ${t.sl&&t.tp?`<div class="tdp-field"><div class="tdp-field-label">R:R Ratio</div><div class="tdp-field-val mono neu">${(Math.abs(priceDiff(t.tp,t.entry))/Math.abs(priceDiff(t.entry,t.sl))).toFixed(2)}:1</div></div>`:''}
+          ${t.asset==='Options'?`
+    <div class="tdp-field" style="background:rgba(0,212,255,.05);border-radius:7px;padding:8px 10px;margin:4px 0;border:1px solid rgba(0,212,255,.12)">
+      <div style="font-size:10px;font-weight:600;color:var(--cyan);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">📋 Options Details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:11px">
+        <div><span style="color:var(--text3)">Type:</span> <strong>${t.optionType||'—'}</strong></div>
+        <div><span style="color:var(--text3)">Strike:</span> <strong>${t.strike?'$'+t.strike:'—'}</strong></div>
+        <div><span style="color:var(--text3)">Expiry:</span> <strong>${t.expiry||'—'}</strong></div>
+        <div><span style="color:var(--text3)">Underlying:</span> <strong>${t.underlying||t.symbol}</strong></div>
+        <div><span style="color:var(--text3)">Contracts:</span> <strong>${t.qty||1}</strong></div>
+        <div><span style="color:var(--text3)">Shares/Contract:</span> <strong>${t.mult||100}</strong></div>
+        <div><span style="color:var(--text3)">Entry Premium:</span> <strong>$${t.entry||0}/sh</strong></div>
+        <div><span style="color:var(--text3)">Exit Premium:</span> <strong>$${t.exit||0}/sh</strong></div>
+        <div><span style="color:var(--text3)">Cost Basis:</span> <strong>$${((t.entry||0)*(t.qty||1)*(t.mult||100)).toFixed(2)}</strong></div>
+        <div><span style="color:var(--text3)">Return:</span> <strong class="${P(t)>=0?'pos':'neg'}">${t.entry>0?((priceDiff(t.dir==='Long'?t.exit:t.entry,t.dir==='Long'?t.entry:t.exit)/t.entry*100).toFixed(1)):'—'}% per share</strong></div>
+      </div>
+    </div>`:''
+    }
+    ${t.sl&&t.tp?`<div class="tdp-field"><div class="tdp-field-label">R:R Ratio</div><div class="tdp-field-val mono neu">${(Math.abs(priceDiff(t.tp,t.entry))/Math.abs(priceDiff(t.entry,t.sl))).toFixed(2)}:1</div></div>`:''}
 
           <div class="tdp-sec-title" style="margin-top:14px">Setup</div>
           <div class="tdp-field"><div class="tdp-field-label">Type</div><div class="tdp-field-val">${t.setup||'—'}</div></div>
@@ -4502,7 +4673,25 @@ function initLogNotes(){const stars=document.getElementById('lf-exec-stars');if(
 function handleLfMedia(files,type){Array.from(files).forEach(file=>{const r=new FileReader();r.onload=e=>{lfMedia[type].push({name:file.name,src:e.target.result});renderLfMedia(type);};r.readAsDataURL(file);});}
 function renderLfMedia(type){const grid=document.getElementById('lf-'+type+'-grid');if(!grid)return;grid.innerHTML=lfMedia[type].map((f,i)=>`<div class="m-thumb">${type==='img'?`<img src="${f.src}">`:`<video src="${f.src}"></video>`}<button class="m-del" onclick="removeLfMedia('${type}',${i})">✕</button></div>`).join('');}
 function removeLfMedia(type,idx){lfMedia[type].splice(idx,1);renderLfMedia(type);}
-function saveNewTrade(){const sym=document.getElementById('lf-sym').value.trim();if(!sym){showNotif('Missing','Enter a symbol first','danger');logStep('details');return;}const en=parseFloat(document.getElementById('lf-entry').value),ex=parseFloat(document.getElementById('lf-exit').value);if(!en||!ex){showNotif('Missing','Enter entry and exit prices','danger');logStep('details');return;}trades.push({id:Date.now(),accountId:activeAccountId,date:document.getElementById('lf-date').value,time:document.getElementById('lf-time').value||'09:30',symbol:sym,asset:document.getElementById('lf-asset').value,dir:document.getElementById('lf-dir').value,entry:en,exit:ex,qty:parseFloat(document.getElementById('lf-qty').value)||1,mult:parseFloat(document.getElementById('lf-mult').value)||1,tags:tagLibrary.filter(x=>logSelTags.has(x.id)).map(x=>x.name.toLowerCase()),setup:logSetupSel||'',notes:document.getElementById('lf-post')?.value||'',media:[]});showNotif('Trade saved',`${sym} logged successfully`,'success');nav('trades');}
+function saveNewTrade(){const sym=document.getElementById('lf-sym').value.trim();if(!sym){showNotif('Missing','Enter a symbol first','danger');logStep('details');return;}const en=parseFloat(document.getElementById('lf-entry').value),ex=parseFloat(document.getElementById('lf-exit').value);if(!en||!ex){showNotif('Missing','Enter entry and exit prices','danger');logStep('details');return;}const _lfAsset=document.getElementById('lf-asset').value;
+  const _isOpt=_lfAsset==='Options';
+  trades.push({
+    id:Date.now(),accountId:activeAccountId,
+    date:document.getElementById('lf-date').value,
+    time:document.getElementById('lf-time').value||'09:30',
+    symbol:sym,asset:_lfAsset,
+    dir:document.getElementById('lf-dir').value,
+    entry:en,exit:ex,
+    qty:parseFloat(document.getElementById('lf-qty').value)||1,
+    mult:_isOpt?(parseFloat(document.getElementById('lf-opt-mult').value)||100):(parseFloat(document.getElementById('lf-mult').value)||1),
+    fee:parseFloat(document.getElementById('lf-fee')?.value||0)||0,
+    optionType:_isOpt?(document.getElementById('lf-opt-type').value||'Call'):undefined,
+    strike:_isOpt?parseFloat(document.getElementById('lf-strike').value||0):undefined,
+    expiry:_isOpt?(document.getElementById('lf-expiry').value||''):undefined,
+    underlying:_isOpt?(document.getElementById('lf-underlying').value.trim()||''):undefined,
+    tags:tagLibrary.filter(x=>logSelTags.has(x.id)).map(x=>x.name.toLowerCase()),
+    setup:logSetupSel||'',notes:document.getElementById('lf-post')?.value||'',media:[]
+  });showNotif('Trade saved',`${sym} logged successfully`,'success');nav('trades');}
 
 // ═══════════════════════════════════════
 // CHECKLIST
@@ -4773,16 +4962,23 @@ function handleCSV(inp){
         }
         const dir = (row.direction||row.dir||'Long');
         const normDir = dir.charAt(0).toUpperCase() + dir.slice(1).toLowerCase();
+        const _csvAsset = row.asset_class || row.asset || 'Stocks';
+        const _csvIsOpt = _csvAsset === 'Options';
         trades.push({
           id: base + i,
           accountId: activeAccountId,
           date: row.date || new Date().toISOString().slice(0,10),
           time: row.time || '09:30',
           symbol: (row.symbol||'UNKNOWN').toUpperCase(),
-          asset: row.asset_class || row.asset || 'Stocks',
+          asset: _csvAsset,
           dir: ['Long','Short'].includes(normDir) ? normDir : 'Long',
-          entry: en, exit: ex, qty, mult,
+          entry: en, exit: ex, qty,
+          mult: _csvIsOpt ? (parseFloat(row.contract_multiplier||row.multiplier||row.mult||100)||100) : (parseFloat(row.contract_multiplier||row.multiplier||row.mult||1)||1),
           fee: parseFloat(row.fee||row.commission||0)||0,
+          optionType: _csvIsOpt ? (row.option_type||row.optiontype||row.type||'Call') : undefined,
+          strike:     _csvIsOpt ? parseFloat(row.strike||0) : undefined,
+          expiry:     _csvIsOpt ? (row.expiry||row.expiration||'') : undefined,
+          underlying: _csvIsOpt ? (row.underlying||row.underlyingsymbol||'') : undefined,
           setup: row.setup || '',
           tags: (row.tags||'').split('|').filter(Boolean).map(t=>t.trim().toLowerCase()),
           notes: row.notes || row.note || '',
@@ -5424,6 +5620,19 @@ function openEditTrade(id){
   document.getElementById('etm-sym').value=t.symbol||'';
   document.getElementById('etm-asset').value=t.asset||'Futures';
   document.getElementById('etm-dir').value=t.dir||'Long';
+  // Populate options-specific fields
+  const _etmIsOptOpen = t.asset==='Options';
+  const _etmOptType   = document.getElementById('etm-opt-type');
+  const _etmStrike    = document.getElementById('etm-strike');
+  const _etmExpiry    = document.getElementById('etm-expiry');
+  const _etmUnder     = document.getElementById('etm-underlying');
+  const _etmOMult     = document.getElementById('etm-opt-mult');
+  if(_etmOptType) _etmOptType.value = t.optionType || 'Call';
+  if(_etmStrike)  _etmStrike.value  = t.strike     || '';
+  if(_etmExpiry)  _etmExpiry.value  = t.expiry     || '';
+  if(_etmUnder)   _etmUnder.value   = t.underlying || '';
+  if(_etmOMult)   _etmOMult.value   = _etmIsOptOpen ? (t.mult||100) : 100;
+  toggleOptionsFields('etm');
   document.getElementById('etm-qty').value=t.qty||1;
   document.getElementById('etm-mult').value=t.mult||1;
   document.getElementById('etm-entry').value=t.entry||'';
@@ -5573,13 +5782,19 @@ function saveEditTrade(){
   const selSetupEl=document.querySelector('[id^="etms-"][style*="rgba(0,212,255"]');
   const resolvedSetup=etmSetupSel||trades[idx].setup||'';
 
+  const _saveAsset=document.getElementById('etm-asset').value;
+  const _saveIsOpt=_saveAsset==='Options';
   trades[idx]={
     ...trades[idx],
     symbol:document.getElementById('etm-sym').value.trim()||trades[idx].symbol,
-    asset:document.getElementById('etm-asset').value,
+    asset:_saveAsset,
     dir:document.getElementById('etm-dir').value,
     qty:parseFloat(document.getElementById('etm-qty').value)||trades[idx].qty,
-    mult:parseFloat(document.getElementById('etm-mult').value)||trades[idx].mult,
+    mult:_saveIsOpt?(parseFloat(document.getElementById('etm-opt-mult').value)||100):(parseFloat(document.getElementById('etm-mult').value)||trades[idx].mult),
+    optionType:_saveIsOpt?(document.getElementById('etm-opt-type').value||'Call'):trades[idx].optionType,
+    strike:_saveIsOpt?(parseFloat(document.getElementById('etm-strike').value)||trades[idx].strike):trades[idx].strike,
+    expiry:_saveIsOpt?(document.getElementById('etm-expiry').value||trades[idx].expiry):trades[idx].expiry,
+    underlying:_saveIsOpt?(document.getElementById('etm-underlying').value.trim()||trades[idx].underlying):trades[idx].underlying,
     entry:parseFloat(document.getElementById('etm-entry').value)||trades[idx].entry,
     exit:parseFloat(document.getElementById('etm-exit').value)||trades[idx].exit,
     sl:parseFloat(document.getElementById('etm-sl').value)||undefined,
