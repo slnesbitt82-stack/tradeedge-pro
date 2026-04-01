@@ -862,7 +862,10 @@ tr:hover td{background:rgba(255,255,255,.015)}
       </div>
       <button class="auth-btn" onclick="doLogin()">Sign In →</button>
       <div class="auth-switch">New to TradeEdge? <a onclick="showAuthPanel('register')">Create an account</a></div>
-      <div style="text-align:center;margin-top:12px">
+      <div style="text-align:center;margin-top:10px">
+        <a onclick="showAuthPanel('reset')" style="font-size:12px;color:var(--text2);cursor:pointer;text-decoration:underline;text-underline-offset:3px">🔑 Forgot password?</a>
+      </div>
+      <div style="text-align:center;margin-top:8px">
         <a onclick="openHowToModal()" style="font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline;text-underline-offset:3px">❓ How to Use TradeEdge Pro</a>
       </div>
     </div>
@@ -892,12 +895,78 @@ tr:hover td{background:rgba(255,255,255,.015)}
         <input id="reg-pass2" type="password" placeholder="Repeat your password" autocomplete="new-password"
           onkeydown="if(event.key==='Enter')doRegister()">
       </div>
+      <div class="auth-field">
+        <label>Security Question <span style="font-size:10px;color:var(--text3)">(for password recovery)</span></label>
+        <select id="reg-sec-q" style="width:100%">
+          <option value="">— Choose a question —</option>
+          <option>What was the name of your first pet?</option>
+          <option>What city were you born in?</option>
+          <option>What was the make of your first car?</option>
+          <option>What is your mother's maiden name?</option>
+          <option>What street did you grow up on?</option>
+          <option>What was the name of your first school?</option>
+          <option>What is your oldest sibling's middle name?</option>
+          <option>What was your childhood nickname?</option>
+        </select>
+      </div>
+      <div class="auth-field">
+        <label>Security Answer</label>
+        <input id="reg-sec-a" type="text" placeholder="Your answer (not case-sensitive)"
+          onkeydown="if(event.key==='Enter')doRegister()">
+      </div>
       <button class="auth-btn" onclick="doRegister()">Create Account →</button>
       <div class="auth-switch">Already have an account? <a onclick="showAuthPanel('login')">Sign in</a></div>
       <div style="text-align:center;margin-top:12px">
         <a onclick="openHowToModal()" style="font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline;text-underline-offset:3px">❓ How to Use TradeEdge Pro</a>
       </div>
     </div>
+
+    <!-- Reset Password panel -->
+    <div class="auth-card" id="auth-reset-panel" style="display:none">
+      <div class="auth-title">Reset Password</div>
+      <div class="auth-sub">Answer your security question to set a new password. Your trades and data are kept safe.</div>
+      <div class="auth-err"     id="reset-err"></div>
+      <div class="auth-success" id="reset-success"></div>
+
+      <!-- Step 1: username + show question -->
+      <div id="reset-step1">
+        <div class="auth-field">
+          <label>Username</label>
+          <input id="reset-user" type="text" placeholder="Enter your username"
+            onkeydown="if(event.key==='Enter')resetLookup()">
+        </div>
+        <button class="auth-btn" onclick="resetLookup()">Find Account →</button>
+      </div>
+
+      <!-- Step 2: answer question + new password (hidden until step 1 succeeds) -->
+      <div id="reset-step2" style="display:none">
+        <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:12px 14px;margin-bottom:16px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--cyan);margin-bottom:6px">Security Question</div>
+          <div style="font-size:13px;color:var(--text);font-weight:500" id="reset-question">—</div>
+        </div>
+        <div class="auth-field">
+          <label>Your Answer</label>
+          <input id="reset-answer" type="text" placeholder="Not case-sensitive"
+            onkeydown="if(event.key==='Enter')document.getElementById('reset-new-pass').focus()">
+        </div>
+        <div class="auth-field">
+          <label>New Password</label>
+          <input id="reset-new-pass" type="password" placeholder="At least 4 characters"
+            onkeydown="if(event.key==='Enter')document.getElementById('reset-confirm-pass').focus()">
+        </div>
+        <div class="auth-field">
+          <label>Confirm New Password</label>
+          <input id="reset-confirm-pass" type="password" placeholder="Repeat new password"
+            onkeydown="if(event.key==='Enter')doResetPassword()">
+        </div>
+        <button class="auth-btn" onclick="doResetPassword()">Set New Password →</button>
+      </div>
+
+      <div class="auth-switch" style="margin-top:14px">
+        <a onclick="showAuthPanel('login')">← Back to Sign In</a>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -7945,11 +8014,13 @@ async function doRegister() {
     errEl.style.display = 'block'; return;
   }
 
+  const secQ = document.getElementById('reg-sec-q')?.value || '';
+  const secA = (document.getElementById('reg-sec-a')?.value || '').trim().toLowerCase();
   const hash = await hashPassword(password);
 
   // Save new user with empty data
   const newData = {
-    _auth: { hash, displayName: username, createdAt: new Date().toISOString() },
+    _auth: { hash, displayName: username, createdAt: new Date().toISOString(), secQ, secA },
     trades: [], accounts: [
       {id:'acc-1',name:'Main Account',broker:'',type:'live',balance:50000,currency:'$',lossLimit:500,profitTarget:1000,color:'#00d4ff',createdAt:new Date().toISOString().slice(0,10)}
     ],
@@ -8048,10 +8119,108 @@ function doLogout() {
   }, 150);
 }
 
+
+// ── Password Reset — Step 1: look up username and reveal security question ──
+function resetLookup() {
+  const errEl  = document.getElementById('reset-err');
+  const succEl = document.getElementById('reset-success');
+  errEl.style.display = 'none';
+  succEl.style.display = 'none';
+
+  const username = document.getElementById('reset-user').value.trim().toLowerCase();
+  if(!username) {
+    errEl.textContent = 'Please enter your username.';
+    errEl.style.display = 'block'; return;
+  }
+
+  const userData = loadUserData(username);
+  if(!userData || !userData._auth) {
+    errEl.textContent = 'Username not found. Check spelling or create a new account.';
+    errEl.style.display = 'block'; return;
+  }
+
+  const secQ = userData._auth.secQ;
+  if(!secQ) {
+    // Account predates security questions — offer admin override
+    errEl.innerHTML = 'This account has no security question set.<br><strong>Tip:</strong> Log in via Settings → Account if you remember the password, then add a security question there. Or create a new account.';
+    errEl.style.display = 'block'; return;
+  }
+
+  // Show step 2
+  document.getElementById('reset-question').textContent = secQ;
+  document.getElementById('reset-step1').style.display = 'none';
+  document.getElementById('reset-step2').style.display = 'block';
+  setTimeout(() => document.getElementById('reset-answer')?.focus(), 80);
+  // Store username for step 2 (as a data attribute to avoid global)
+  document.getElementById('reset-step2').dataset.username = username;
+}
+
+// ── Password Reset — Step 2: verify answer and set new password ──
+async function doResetPassword() {
+  const errEl  = document.getElementById('reset-err');
+  const succEl = document.getElementById('reset-success');
+  errEl.style.display  = 'none';
+  succEl.style.display = 'none';
+  const showErr = msg => { errEl.textContent = msg; errEl.style.display = 'block'; };
+
+  const username   = document.getElementById('reset-step2').dataset.username || '';
+  const answer     = document.getElementById('reset-answer').value.trim().toLowerCase();
+  const newPass    = document.getElementById('reset-new-pass').value;
+  const confirmP   = document.getElementById('reset-confirm-pass').value;
+
+  if(!answer)            { showErr('Enter your security answer.'); return; }
+  if(newPass.length < 4) { showErr('New password must be at least 4 characters.'); return; }
+  if(newPass !== confirmP){ showErr('Passwords do not match.'); return; }
+
+  const userData = loadUserData(username);
+  if(!userData || !userData._auth) { showErr('Account not found. Please start over.'); return; }
+
+  // Verify security answer (case-insensitive, trim whitespace)
+  const storedAnswer = (userData._auth.secA || '').toLowerCase().trim();
+  if(answer !== storedAnswer) {
+    showErr('Incorrect answer. Check your spelling and try again.'); return;
+  }
+
+  // Set new password
+  const newHash = await hashPassword(newPass);
+  userData._auth.hash = newHash;
+  saveUserData(username, userData);
+
+  // Show success and redirect back to login after a moment
+  succEl.textContent = '✓ Password reset! Redirecting to sign in…';
+  succEl.style.display = 'block';
+  document.getElementById('reset-step2').style.display = 'none';
+
+  setTimeout(() => {
+    showAuthPanel('login');
+    const userEl = document.getElementById('login-user');
+    if(userEl) { userEl.value = username; }
+    const passEl = document.getElementById('login-pass');
+    if(passEl) { passEl.value = ''; passEl.focus(); }
+  }, 1800);
+}
+
 // ── Panel switching ──
 function showAuthPanel(panel) {
   document.getElementById('auth-login-panel').style.display    = panel==='login'    ? 'block' : 'none';
   document.getElementById('auth-register-panel').style.display = panel==='register' ? 'block' : 'none';
+  document.getElementById('auth-reset-panel').style.display    = panel==='reset'    ? 'block' : 'none';
+  // Clear reset state when switching panels
+  if(panel !== 'reset') {
+    ['reset-err','reset-success'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.style.display='none';
+    });
+    const s1=document.getElementById('reset-step1');
+    const s2=document.getElementById('reset-step2');
+    if(s1) s1.style.display='block';
+    if(s2) s2.style.display='none';
+    const u=document.getElementById('reset-user'); if(u) u.value='';
+    const a=document.getElementById('reset-answer'); if(a) a.value='';
+    const np=document.getElementById('reset-new-pass'); if(np) np.value='';
+    const cp=document.getElementById('reset-confirm-pass'); if(cp) cp.value='';
+  } else {
+    setTimeout(()=>document.getElementById('reset-user')?.focus(), 80);
+  }
 }
 
 // ── User dropdown ──
