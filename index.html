@@ -110,6 +110,9 @@ html::before{
 .tdp-symbol{font-family:var(--head);font-size:22px;font-weight:800;letter-spacing:-.3px}
 .tdp-pnl{font-family:var(--mono);font-size:24px;font-weight:600;margin-left:auto}
 .tdp-close{background:none;border:1px solid var(--bdr2);color:var(--text2);border-radius:7px;padding:5px 11px;cursor:pointer;font-size:12px;font-family:var(--font);transition:all .15s;flex-shrink:0}
+.tbl-cb{width:16px;height:16px;cursor:pointer;accent-color:var(--cyan);flex-shrink:0}
+.bulk-bar{display:none;align-items:center;gap:10px;padding:8px 14px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);border-radius:9px;margin-bottom:10px;animation:fadeIn .15s ease}
+.bulk-bar.show{display:flex}
 .tdp-close:hover{background:var(--bg4);color:var(--text)}
 
 .tdp-body{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0}
@@ -269,6 +272,8 @@ html::before{
   border-top:1px solid var(--bdr);padding:0 4px 8px;
   align-items:center;justify-content:space-around;flex-shrink:0;z-index:50
 }
+/* Force-hide bottom-nav when user explicitly picks icon/expanded sidebar style */
+.bottom-nav.bn-force-hide{display:none!important}
 .bn-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 12px;border-radius:12px;cursor:pointer;transition:all .18s;min-width:52px;position:relative}
 .bn-item.active{background:rgba(0,212,255,.1)}
 .bn-icon{font-size:20px;line-height:1;transition:transform .18s}
@@ -687,6 +692,143 @@ tr:hover td{background:rgba(255,255,255,.015)}
   display: none;
 }
 
+
+/* ═══════════════════════════════════════════
+   GUIDED TOUR OVERLAY
+═══════════════════════════════════════════ */
+#tour-overlay{
+  display:none;position:absolute;inset:0;z-index:1000;
+  pointer-events:none;
+}
+#tour-overlay.active{display:block;pointer-events:all;}
+
+/* SVG backdrop with spotlight hole */
+#tour-backdrop{
+  position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:all;
+}
+#tour-spotlight-rect{
+  fill:rgba(0,0,0,0);rx:10;
+  transition:x .35s cubic-bezier(.4,0,.2,1),
+             y .35s cubic-bezier(.4,0,.2,1),
+             width .35s cubic-bezier(.4,0,.2,1),
+             height .35s cubic-bezier(.4,0,.2,1);
+}
+
+/* Tooltip card */
+#tour-card{
+  position:absolute;
+  background:var(--bg2);
+  border:1.5px solid rgba(0,212,255,.35);
+  border-radius:16px;
+  padding:20px 22px 16px;
+  width:300px;
+  max-width:calc(100vw - 24px);
+  box-shadow:0 8px 40px rgba(0,0,0,.55),0 0 0 1px rgba(0,212,255,.1);
+  pointer-events:all;
+  transition:left .35s cubic-bezier(.4,0,.2,1),
+             top  .35s cubic-bezier(.4,0,.2,1),
+             opacity .2s ease;
+  z-index:1001;
+}
+#tour-card.tc-entering{opacity:0;}
+#tour-card.tc-visible{opacity:1;}
+
+/* Arrow notch */
+#tour-arrow{
+  position:absolute;
+  width:14px;height:14px;
+  background:var(--bg2);
+  border:1.5px solid rgba(0,212,255,.35);
+  transform:rotate(45deg);
+  transition:left .35s cubic-bezier(.4,0,.2,1),
+             top  .35s cubic-bezier(.4,0,.2,1);
+  z-index:1000;
+}
+
+/* Tour card header */
+.tc-step-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.6px;color:var(--cyan);
+  background:rgba(0,212,255,.1);
+  border:1px solid rgba(0,212,255,.2);
+  border-radius:20px;padding:3px 9px;
+  margin-bottom:10px;
+}
+.tc-title{
+  font-family:var(--head);font-size:15px;font-weight:700;
+  margin-bottom:7px;line-height:1.3;color:var(--text);
+}
+.tc-body{
+  font-size:12px;color:var(--text2);line-height:1.75;
+  margin-bottom:14px;
+}
+.tc-body strong{color:var(--text);}
+.tc-body code{
+  background:var(--bg3);padding:1px 6px;
+  border-radius:4px;font-size:10px;font-family:var(--mono);
+  color:var(--cyan);
+}
+
+/* Tour footer */
+.tc-footer{
+  display:flex;align-items:center;
+  justify-content:space-between;
+  border-top:1px solid var(--bdr);
+  padding-top:12px;gap:8px;
+}
+.tc-dots{display:flex;gap:5px;align-items:center;}
+.tc-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--bg4);transition:all .2s;cursor:pointer;
+}
+.tc-dot.active{
+  width:18px;border-radius:4px;
+  background:var(--cyan);
+}
+
+/* Skip link */
+#tour-skip{
+  position:absolute;top:14px;right:14px;z-index:1002;
+  font-size:11px;color:var(--text3);cursor:pointer;
+  background:var(--bg2);border:1px solid var(--bdr2);
+  border-radius:8px;padding:5px 10px;
+  transition:all .15s;pointer-events:all;
+}
+#tour-skip:hover{color:var(--text);border-color:var(--bdr);}
+
+/* Progress bar at top */
+#tour-progress{
+  position:absolute;top:0;left:0;height:3px;
+  background:linear-gradient(90deg,var(--cyan),var(--purple));
+  border-radius:0 3px 3px 0;
+  transition:width .35s cubic-bezier(.4,0,.2,1);
+  z-index:1002;pointer-events:none;
+}
+
+/* Spotlight glow ring */
+#tour-ring{
+  position:absolute;
+  border:2px solid var(--cyan);
+  border-radius:12px;
+  box-shadow:0 0 0 3px rgba(0,212,255,.15),
+             0 0 20px rgba(0,212,255,.25);
+  pointer-events:none;
+  transition:left .35s cubic-bezier(.4,0,.2,1),
+             top  .35s cubic-bezier(.4,0,.2,1),
+             width .35s cubic-bezier(.4,0,.2,1),
+             height .35s cubic-bezier(.4,0,.2,1),
+             opacity .2s;
+  z-index:1001;
+}
+
+@keyframes tourPulse{
+  0%,100%{box-shadow:0 0 0 3px rgba(0,212,255,.15),0 0 20px rgba(0,212,255,.25);}
+  50%    {box-shadow:0 0 0 6px rgba(0,212,255,.2),0 0 32px rgba(0,212,255,.35);}
+}
+#tour-ring.pulsing{animation:tourPulse 2s ease infinite;}
+
 </style>
 </head>
 <body>
@@ -761,6 +903,40 @@ tr:hover td{background:rgba(255,255,255,.015)}
 
 <!-- ════════════ APP SHELL ════════════ -->
 <div class="app">
+<!-- ════════ GUIDED TOUR OVERLAY ════════ -->
+<div id="tour-overlay">
+  <!-- Progress bar -->
+  <div id="tour-progress" style="width:0%"></div>
+  <!-- Skip button -->
+  <button id="tour-skip" onclick="tourSkip()">✕ Skip Tour</button>
+  <!-- Dark backdrop SVG -->
+  <svg id="tour-backdrop" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <mask id="tour-mask">
+        <rect width="100%" height="100%" fill="white"/>
+        <rect id="tour-hole" x="0" y="0" width="0" height="0" rx="12" fill="black"/>
+      </mask>
+    </defs>
+    <rect width="100%" height="100%" fill="rgba(0,0,0,0.72)" mask="url(#tour-mask)"/>
+  </svg>
+  <!-- Spotlight glow ring -->
+  <div id="tour-ring"></div>
+  <!-- Arrow notch (triangle pointing toward target) -->
+  <div id="tour-arrow"></div>
+  <!-- Tooltip card -->
+  <div id="tour-card" class="tc-entering">
+    <div class="tc-step-badge" id="tc-badge">Step 1 of 12</div>
+    <div class="tc-title"  id="tc-title">Welcome!</div>
+    <div class="tc-body"   id="tc-body"></div>
+    <div class="tc-footer">
+      <div class="tc-dots" id="tc-dots"></div>
+      <div style="display:flex;gap:7px">
+        <button class="btn btn-g btn-sm" id="tc-prev-btn" onclick="tourNav(-1)" style="display:none">← Back</button>
+        <button class="btn btn-c btn-sm" id="tc-next-btn" onclick="tourNav(1)">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
   <!-- ══════════ PWA INSTALL BANNER ══════════ -->
   <div id="pwa-install-banner" class="hidden">
     <div class="pwa-banner-icon">📈</div>
@@ -1116,10 +1292,28 @@ tr:hover td{background:rgba(255,255,255,.015)}
         <!-- Summary bar -->
         <div id="trades-summary-bar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"></div>
         <!-- Table -->
+        <!-- Bulk action bar (shown when trades are selected) -->
+        <div class="bulk-bar" id="bulk-bar">
+          <div style="display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:6px;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.3);border-radius:8px;padding:4px 10px">
+              <span style="font-size:15px">☑</span>
+              <span style="font-size:13px;font-weight:700;color:var(--cyan)" id="bulk-count">0 selected</span>
+            </div>
+            <button class="btn btn-d btn-sm" onclick="bulkDeleteTrades()" style="gap:5px">🗑 Delete Selected</button>
+            <button class="btn btn-g btn-sm" onclick="bulkClearSelection()" style="gap:5px">✕ Clear</button>
+          </div>
+          <span style="font-size:11px;color:var(--text3)">Tick checkboxes or use Select All ↑</span>
+        </div>
         <div class="card" style="padding:0;overflow:hidden">
           <div class="tbl-wrap">
             <table>
               <thead><tr>
+                <th style="width:40px;padding:10px 10px;text-align:center">
+                  <input type="checkbox" class="tbl-cb" id="tbl-select-all"
+                    title="Select / deselect all visible trades"
+                    onclick="bulkToggleAll(this.checked)"
+                    style="width:15px;height:15px;cursor:pointer;accent-color:var(--cyan)" />
+                </th>
                 <th>Date</th><th>Symbol</th><th>Asset</th><th>Side</th>
                 <th>Entry</th><th>Exit</th><th>Qty</th><th>P&L</th>
                 <th>Setup</th><th>Tags</th><th>Notes</th><th></th>
@@ -1365,8 +1559,101 @@ tr:hover td{background:rgba(255,255,255,.015)}
           </div>
           <div class="card">
             <div class="sec">Expected Format</div>
-            <div style="background:var(--bg3);border-radius:7px;padding:10px 12px;font-family:var(--mono);font-size:10px;color:var(--text2);overflow-x:auto;white-space:nowrap;margin-bottom:10px">date,symbol,asset_class,direction,entry,exit,quantity,contract_multiplier,notes,tags</div>
-            <div style="font-size:12px;color:var(--text2);line-height:1.9"><span style="color:var(--cyan);font-family:var(--mono)">asset_class</span> — Futures | Forex | Stocks<br><span style="color:var(--cyan);font-family:var(--mono)">contract_multiplier</span> — e.g. 0.5 for MYMH6<br><span style="color:var(--cyan);font-family:var(--mono)">tags</span> — pipe-separated: breakout|trend</div>
+
+            <!-- Required columns label -->
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+              <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--red);background:rgba(255,71,87,.1);border:1px solid rgba(255,71,87,.25);border-radius:5px;padding:2px 7px">Required</span>
+              <span style="font-size:11px;color:var(--text2)">These columns must be present</span>
+            </div>
+            <div style="background:var(--bg3);border-radius:7px;padding:10px 12px;font-family:var(--mono);font-size:10px;color:var(--cyan);overflow-x:auto;white-space:nowrap;margin-bottom:6px;border:1px solid rgba(0,212,255,.15)">date, time, symbol, direction, entry, exit</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:12px">
+              <strong style="color:var(--text2)">date</strong> and <strong style="color:var(--text2)">time</strong> must be separate columns, or combined in one column as
+              <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">2025-03-14 09:32</code>.
+              <strong style="color:var(--text2)">time</strong> defaults to <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">09:30</code> if omitted.
+            </div>
+
+            <!-- Optional columns label -->
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+              <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);background:var(--bg3);border:1px solid var(--bdr);border-radius:5px;padding:2px 7px">Optional</span>
+              <span style="font-size:11px;color:var(--text2)">Include any or all of these</span>
+            </div>
+            <div style="background:var(--bg3);border-radius:7px;padding:10px 12px;font-family:var(--mono);font-size:10px;color:var(--text2);overflow-x:auto;white-space:nowrap;margin-bottom:14px">asset_class, quantity, contract_multiplier, fee, setup, tags, notes,<br>option_type, strike, expiry, underlying</div>
+
+            <!-- Sample row -->
+            <div class="sec" style="margin-bottom:6px">Sample Rows</div>
+            <div style="background:var(--bg3);border-radius:7px;padding:10px 12px;font-family:var(--mono);font-size:10px;color:var(--text2);overflow-x:auto;white-space:nowrap;margin-bottom:6px;line-height:2">
+              <span style="color:var(--text3)"># Stocks / Futures / Forex</span><br>
+              <span style="color:var(--cyan)">date,time,symbol,asset_class,direction,entry,exit,quantity,contract_multiplier,fee,setup,tags,notes</span><br>
+              <span style="color:var(--green)">2025-03-14,09:32,MYMH6,Futures,Long,21800,21850,2,0.5,1.50,Breakout,breakout|trend,Clean open drive</span><br>
+              <span style="color:var(--green)">2025-03-15,14:20,AAPL,Stocks,Short,178.50,175.00,100,1,0,Reversal,reversal,"Earnings miss play"</span>
+            </div>
+            <div style="background:var(--bg3);border-radius:7px;padding:10px 12px;font-family:var(--mono);font-size:10px;color:var(--text2);overflow-x:auto;white-space:nowrap;margin-bottom:6px;line-height:2">
+              <span style="color:var(--text3)"># Options — add these extra columns</span><br>
+              <span style="color:var(--cyan)">date,time,symbol,asset_class,direction,entry,exit,quantity,contract_multiplier,fee,setup,tags,notes,option_type,strike,expiry,underlying</span><br>
+              <span style="color:var(--green)">2025-03-14,10:15,SPY250321C450,Options,Long,3.50,6.20,5,100,0,Breakout,breakout,,Call,450,2025-03-21,SPY</span>
+            </div>
+            <div style="background:var(--bg3);border-radius:7px;padding:10px 12px;font-family:var(--mono);font-size:10px;color:var(--text2);overflow-x:auto;white-space:nowrap;margin-bottom:14px;line-height:2">
+              <span style="color:var(--text3)"># Combined date+time in one column (broker export style)</span><br>
+              <span style="color:var(--cyan)">date,symbol,asset_class,direction,entry,exit,quantity,fee,notes</span><br>
+              <span style="color:var(--green)">2025-03-14 09:32:00,MYMH6,Futures,Long,21800,21850,2,1.50,Good breakout</span>
+            </div>
+
+            <!-- Field reference -->
+            <div class="sec" style="margin-bottom:8px">Field Reference</div>
+            <div style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--text2)">
+              <div style="display:flex;gap:8px;align-items:baseline">
+                <code style="font-family:var(--mono);color:var(--cyan);font-size:11px;min-width:80px;flex-shrink:0">date</code>
+                <span>Trade date. Accepted: <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">YYYY-MM-DD</code> &nbsp; <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">MM/DD/YYYY</code> &nbsp; <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">DD-MM-YYYY</code>. Can also contain a combined datetime: <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">2025-03-14 09:32</code> — the time is split out automatically.</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:baseline">
+                <code style="font-family:var(--mono);color:var(--cyan);font-size:11px;min-width:80px;flex-shrink:0">time</code>
+                <span>Entry time. Accepted: <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">HH:MM</code> &nbsp; <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">HH:MM:SS</code> &nbsp; <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">9:30 AM</code>. Optional — defaults to <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">09:30</code> if the column is absent or empty. Omit entirely if using a combined datetime in the <strong>date</strong> column.</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:baseline">
+                <code style="font-family:var(--mono);color:var(--text2);font-size:11px;min-width:50px;flex-shrink:0">direction</code>
+                <span><code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">Long</code> or <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">Short</code> (case-insensitive). Also accepts <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">Buy/Sell</code>, <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">B/S</code>, <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">L/S</code>.</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:baseline">
+                <code style="font-family:var(--mono);color:var(--text2);font-size:11px;min-width:50px;flex-shrink:0">asset_class</code>
+                <span><code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">Futures</code> &nbsp; <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">Forex</code> &nbsp; <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">Stocks</code> &nbsp; <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">Crypto</code> &nbsp; <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">Options</code>. Defaults to Stocks if blank.</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:baseline">
+                <code style="font-family:var(--mono);color:var(--text2);font-size:11px;min-width:50px;flex-shrink:0">contract_<br>multiplier</code>
+                <span>Contract multiplier — e.g. <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">0.5</code> for MYM, <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">5</code> for MES, <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">100</code> for options contracts. Defaults to 1.</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:baseline">
+                <code style="font-family:var(--mono);color:var(--text2);font-size:11px;min-width:50px;flex-shrink:0">tags</code>
+                <span>Pipe-separated: <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">breakout|trend|fomo</code></span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:baseline">
+                <code style="font-family:var(--mono);color:var(--text2);font-size:11px;min-width:80px;flex-shrink:0">fee</code>
+                <span>Commission / fee in dollars. Subtracted from P&L when <strong>Include Commission in P&L</strong> is on in Settings.</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:baseline">
+                <code style="font-family:var(--mono);color:var(--text2);font-size:11px;min-width:80px;flex-shrink:0">option_type</code>
+                <span><em>Options only.</em> <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">Call</code> or <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">Put</code>.</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:baseline">
+                <code style="font-family:var(--mono);color:var(--text2);font-size:11px;min-width:80px;flex-shrink:0">strike</code>
+                <span><em>Options only.</em> Strike price, e.g. <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">450</code>.</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:baseline">
+                <code style="font-family:var(--mono);color:var(--text2);font-size:11px;min-width:80px;flex-shrink:0">expiry</code>
+                <span><em>Options only.</em> Expiration date in <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">YYYY-MM-DD</code> format.</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:baseline">
+                <code style="font-family:var(--mono);color:var(--text2);font-size:11px;min-width:80px;flex-shrink:0">underlying</code>
+                <span><em>Options only.</em> Underlying ticker, e.g. <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">SPY</code>.</span>
+              </div>
+            </div>
+
+            <!-- Delimiter note -->
+            <div style="background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:8px;padding:10px 12px;margin-top:14px;font-size:11px;color:var(--text2);line-height:1.7">
+              💡 <strong style="color:var(--text)">Delimiter:</strong> Comma (,) and semicolon (;) are both auto-detected.<br>
+              💡 <strong style="color:var(--text)">Datetime in one column:</strong> If your broker exports <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">2025-03-14 09:32:00</code> as a single value, place it in the <strong>date</strong> column — the app splits it automatically.<br>
+              💡 <strong style="color:var(--text)">Quoted values:</strong> Values wrapped in double quotes (e.g. <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">"my note"</code>) are handled correctly.
+            </div>
+
             <div id="csv-res" style="display:none;margin-top:12px"></div>
           </div>
         </div>
@@ -2021,7 +2308,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
                   <div style="font-family:var(--head);font-size:17px;font-weight:700;margin-bottom:4px">TradeEdge Pro — User Guide</div>
                   <div style="font-size:12px;color:var(--text2);line-height:1.7">Everything you need to know to get the most out of your private trading journal. Use the sections below as a reference any time.</div>
                 </div>
-                <button class="btn btn-c btn-sm" onclick="openHowToModal()">▶ Interactive Tour</button>
+                <button class="btn btn-c btn-sm" onclick="startTour()">▶ Interactive Tour</button>
               </div>
             </div>
 
@@ -2107,7 +2394,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
                 <div class="sec">📥 CSV Import</div>
                 <div style="font-size:12px;color:var(--text2);line-height:1.8">
                   Import trades in bulk from broker CSV exports or spreadsheets.<br>
-                  <strong style="color:var(--text)">Required columns</strong> — <code style="font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">date, symbol, direction, entry, exit</code><br>
+                  <strong style="color:var(--text)">Required columns</strong> — <code style="font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">date, symbol, direction, entry, exit</code> (<strong>time</strong> strongly recommended)<br>
                   <strong style="color:var(--text)">Optional columns</strong> — <code style="font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">quantity, contract_multiplier, fee, setup, tags, notes, time, asset_class</code><br>
                   <strong style="color:var(--text)">Tags</strong> — pipe-separated: <code style="font-size:10px;background:var(--bg3);padding:1px 5px;border-radius:3px">breakout|fomo|trend</code><br>
                   <strong style="color:var(--text)">Delimiter</strong> — comma or semicolon, auto-detected.<br>
@@ -2268,7 +2555,13 @@ tr:hover td{background:rgba(255,255,255,.015)}
             </div>
             <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
               <div style="font-size:13px;font-weight:600;margin-bottom:6px">📥 Importing from CSV</div>
-              <div style="font-size:12px;color:var(--text2);line-height:1.8">Go to <strong>Import CSV</strong> in the sidebar. Minimum required columns: <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">date, symbol, direction, entry, exit</code><br>Optional columns: <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">quantity, contract_multiplier, fee, setup, tags, notes, time, asset_class</code><br>Tags must be pipe-separated: <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">breakout|trend|fomo</code>. Comma and semicolon delimiters are both supported. Imported trades appear immediately in the Trade Log.</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.8">Go to <strong>Import CSV</strong> in the sidebar.<br>
+                <strong>Required:</strong> <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">date, time, symbol, direction, entry, exit</code><br>
+                <strong>Optional:</strong> <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">asset_class, quantity, contract_multiplier, fee, setup, tags, notes</code><br>
+                <strong>Date formats:</strong> <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">YYYY-MM-DD</code>, <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">MM/DD/YYYY</code>, <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">DD-MM-YYYY</code>.<br>
+                <strong>Time formats:</strong> <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">HH:MM</code>, <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">HH:MM:SS</code>, <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">9:30 AM</code>. If your broker exports a combined datetime in one column (e.g. <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">2025-03-14 09:32</code>), place it in the <strong>date</strong> column — the app splits it automatically.<br>
+                Tags are pipe-separated: <code style="background:var(--bg4);padding:1px 5px;border-radius:3px;font-size:10px">breakout|trend|fomo</code>. Comma and semicolon delimiters both supported.
+              </div>
             </div>
             <div style="background:var(--bg3);border-radius:10px;padding:13px;border:1px solid var(--bdr)">
               <div style="font-size:13px;font-weight:600;margin-bottom:6px">💰 Fees & Net P&L</div>
@@ -2433,8 +2726,8 @@ tr:hover td{background:rgba(255,255,255,.015)}
             </div>
           </div>
           <div style="margin-top:14px;text-align:center">
-            <button class="btn btn-c" style="justify-content:center;padding:10px 28px;font-size:13px" onclick="closeModal('howto-modal');showNotif('All set! 🚀','Head to Settings to configure your account','success')">
-              Let's go! 🚀
+            <button class="btn btn-c" style="justify-content:center;padding:10px 28px;font-size:13px" onclick="closeModal('howto-modal');startTour()">
+              ▶ Start Interactive Tour 🚀
             </button>
           </div>
         </div>
@@ -3383,6 +3676,10 @@ function monT(accountId){const acct=accountId||activeAccountId;const p=`${calYr}
 // NAVIGATION
 // ═══════════════════════════════════════
 function nav(page){
+  // Clear trade log bulk selection when navigating away
+  if(page !== 'trades' && typeof _bulkSelected !== 'undefined' && _bulkSelected.size > 0) {
+    _bulkSelected.clear();
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.sb-item,.drawer-item,.bn-item').forEach(s=>s.classList.remove('active'));
   const pg=document.getElementById('pg-'+page);
@@ -4376,7 +4673,98 @@ function renderAAsset(){['Futures','Forex','Stocks','Crypto','Options'].forEach(
 // ═══════════════════════════════════════
 let activeTdpId=null; // currently expanded trade detail panel
 
+// ═══════════════════════════════════════════════════════════
+// TRADE LOG — MULTI-SELECT / BULK DELETE
+// ═══════════════════════════════════════════════════════════
+let _bulkSelected = new Set(); // Set of trade IDs currently checked
+
+function _bulkUpdateBar() {
+  const bar     = document.getElementById('bulk-bar');
+  const countEl = document.getElementById('bulk-count');
+  const saEl    = document.getElementById('tbl-select-all');
+  const n       = _bulkSelected.size;
+  if(bar)     bar.classList.toggle('show', n > 0);
+  if(countEl) countEl.textContent = n + ' selected';
+  // Sync select-all checkbox state
+  if(saEl) {
+    const allBoxes = document.querySelectorAll('#tbl-trades .tbl-cb');
+    const checkedBoxes = [...allBoxes].filter(c => c.checked);
+    saEl.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < allBoxes.length;
+    saEl.checked = allBoxes.length > 0 && checkedBoxes.length === allBoxes.length;
+  }
+}
+
+function bulkToggle(id, checked) {
+  if(checked) _bulkSelected.add(id);
+  else        _bulkSelected.delete(id);
+  // Update row highlight
+  const row = document.getElementById('tr-row-' + id);
+  if(row) {
+    if(checked) {
+      row.style.background = 'rgba(0,212,255,.05)';
+      row.style.outline = '1px solid rgba(0,212,255,.15)';
+      row.style.outlineOffset = '-1px';
+    } else {
+      row.style.background = '';
+      row.style.outline = '';
+      row.style.outlineOffset = '';
+    }
+  }
+  _bulkUpdateBar();
+}
+
+function bulkToggleAll(checked) {
+  const boxes = document.querySelectorAll('#tbl-trades .tbl-cb');
+  boxes.forEach(cb => {
+    const id = parseInt(cb.id.replace('cb-',''));
+    if(!isNaN(id)) {
+      cb.checked = checked;
+      bulkToggle(id, checked);
+    }
+  });
+}
+
+function bulkClearSelection() {
+  _bulkSelected.clear();
+  document.querySelectorAll('#tbl-trades .tbl-cb').forEach(cb => { cb.checked = false; });
+  document.querySelectorAll('#tbl-trades tr').forEach(row => {
+    row.style.background = ''; row.style.outline = ''; row.style.outlineOffset = '';
+  });
+  const saEl = document.getElementById('tbl-select-all');
+  if(saEl) { saEl.checked = false; saEl.indeterminate = false; }
+  _bulkUpdateBar();
+}
+
+function bulkDeleteTrades() {
+  const n = _bulkSelected.size;
+  if(!n) return;
+  if(!confirm(`Delete ${n} selected trade${n!==1?'s':''}? This cannot be undone.`)) return;
+
+  // Close detail panel if its trade is being deleted
+  if(activeTdpId && _bulkSelected.has(activeTdpId)) {
+    activeTdpId = null;
+    const wrap = document.getElementById('trade-detail-panel-wrap');
+    if(wrap) wrap.innerHTML = '';
+  }
+
+  trades = trades.filter(t => !_bulkSelected.has(t.id));
+  _bulkSelected.clear();
+
+  // Update the select-all checkbox state
+  const saEl = document.getElementById('tbl-select-all');
+  if(saEl) { saEl.checked = false; saEl.indeterminate = false; }
+  const bar = document.getElementById('bulk-bar');
+  if(bar) bar.classList.remove('show');
+
+  renderTrades();
+  // Refresh calendar if it was open so it reflects deleted trades
+  if(typeof renderCal === 'function') renderCal();
+  showNotif('Trades deleted', n + ' trade' + (n!==1?'s':'') + ' removed', 'info');
+}
+
 function renderTrades(){
+  // Clear stale selections that are no longer visible after filter changes
+  // (keep IDs that are still in filtered set — handled below)
   const fa=document.getElementById('f-asset').value;
   const fd_=document.getElementById('f-dir').value;
   const fr=document.getElementById('f-res').value;
@@ -4390,6 +4778,14 @@ function renderTrades(){
     if(fs&&t.setup!==fs)return false;
     return true;
   }).sort((a,b)=>b.date.localeCompare(a.date)||((b.time||'').localeCompare(a.time||'')));
+
+  // Prune selections to only trades visible in current filter
+  if(_bulkSelected.size > 0) {
+    const visibleIds = new Set(filtered.map(t => t.id));
+    let changed = false;
+    _bulkSelected.forEach(id => { if(!visibleIds.has(id)) { _bulkSelected.delete(id); changed=true; } });
+    if(changed) _bulkUpdateBar();
+  }
 
   // Summary bar
   const sb=document.getElementById('trades-summary-bar');
@@ -4415,19 +4811,27 @@ function renderTrades(){
     const isOpen=activeTdpId===t.id;
     const notePreview=t.notes?t.notes.slice(0,40)+(t.notes.length>40?'…':''):'—';
     const mediaCount=(t.media||[]).length;
-    return`<tr class="tbl-row-clickable${isOpen?' tr-selected':''}" onclick="toggleTradeDetail(${t.id})" id="tr-row-${t.id}">
-      <td style="font-size:11px;color:var(--text3);white-space:nowrap">${fmtDate(new Date(t.date))}</td>
-      <td style="font-family:var(--mono);font-weight:700;font-size:13px">${t.symbol}</td>
-      <td><span class="tag tgr">${t.asset}</span></td>
-      <td>${t.dir==='Long'?'<span class="tag tg">Long</span>':'<span class="tag tr">Short</span>'}</td>
-      <td style="font-family:var(--mono);font-size:11px">${t.entry}</td>
-      <td style="font-family:var(--mono);font-size:11px">${t.exit}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--text2)">${t.qty}${t.mult!==1?'<span style="color:var(--text3)">×'+t.mult+'</span>':''}</td>
-      <td style="font-family:var(--mono);font-weight:700;${p>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(p)}</td>
-      <td style="font-size:11px;color:var(--text2)">${t.setup||'—'}</td>
-      <td>${t.tags.slice(0,2).map(tg=>`<span class="tag ${['revenge-trade','fomo','stop-out'].includes(tg)?'tr':tg.includes('trend')||tg.includes('break')?'tg':'tb'}">${tg}</span>`).join('')}${t.tags.length>2?`<span class="tag tgr">+${t.tags.length-2}</span>`:''}</td>
-      <td style="font-size:11px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${notePreview}</td>
-      <td style="white-space:nowrap">
+    const isSel=_bulkSelected.has(t.id);
+    return`<tr class="tbl-row-clickable${isOpen?' tr-selected':''}${isSel?' tr-bulk-sel':''}" id="tr-row-${t.id}"
+      style="${isSel?'background:rgba(0,212,255,.05);outline:1px solid rgba(0,212,255,.15);outline-offset:-1px':''}">
+      <td style="padding:8px 10px;width:40px;text-align:center" onclick="event.stopPropagation()">
+        <input type="checkbox" class="tbl-cb" id="cb-${t.id}"
+          ${isSel?'checked':''}
+          onclick="event.stopPropagation();bulkToggle(${t.id},this.checked)"
+          style="width:15px;height:15px;cursor:pointer;accent-color:var(--cyan)" />
+      </td>
+      <td onclick="toggleTradeDetail(${t.id})" style="font-size:11px;color:var(--text3);white-space:nowrap">${fmtDate(new Date(t.date))}</td>
+      <td onclick="toggleTradeDetail(${t.id})" style="font-family:var(--mono);font-weight:700;font-size:13px">${t.symbol}</td>
+      <td onclick="toggleTradeDetail(${t.id})"><span class="tag tgr">${t.asset}</span></td>
+      <td onclick="toggleTradeDetail(${t.id})">${t.dir==='Long'?'<span class="tag tg">Long</span>':'<span class="tag tr">Short</span>'}</td>
+      <td onclick="toggleTradeDetail(${t.id})" style="font-family:var(--mono);font-size:11px">${t.entry}</td>
+      <td onclick="toggleTradeDetail(${t.id})" style="font-family:var(--mono);font-size:11px">${t.exit}</td>
+      <td onclick="toggleTradeDetail(${t.id})" style="font-family:var(--mono);font-size:11px;color:var(--text2)">${t.qty}${t.mult!==1?'<span style="color:var(--text3)">×'+t.mult+'</span>':''}</td>
+      <td onclick="toggleTradeDetail(${t.id})" style="font-family:var(--mono);font-weight:700;${p>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(p)}</td>
+      <td onclick="toggleTradeDetail(${t.id})" style="font-size:11px;color:var(--text2)">${t.setup||'—'}</td>
+      <td onclick="toggleTradeDetail(${t.id})">${t.tags.slice(0,2).map(tg=>`<span class="tag ${['revenge-trade','fomo','stop-out'].includes(tg)?'tr':tg.includes('trend')||tg.includes('break')?'tg':'tb'}">${tg}</span>`).join('')}${t.tags.length>2?`<span class="tag tgr">+${t.tags.length-2}</span>`:''}</td>
+      <td onclick="toggleTradeDetail(${t.id})" style="font-size:11px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${notePreview}</td>
+      <td onclick="toggleTradeDetail(${t.id})" style="white-space:nowrap">
         ${mediaCount?`<span style="font-size:10px;color:var(--cyan);margin-right:4px">📎${mediaCount}</span>`:''}
         <span style="font-size:12px;color:var(--text3);margin-right:4px">${isOpen?'▲':'▼'}</span>
       </td>
@@ -4602,12 +5006,36 @@ function delTrade(id){if(confirm('Delete this trade?')){if(activeTdpId===id){act
 
 function exportTradesCSV(){
   const at=getAccountTrades();
-  const headers='date,time,symbol,asset,direction,entry,exit,qty,multiplier,pnl,setup,tags,notes';
-  const rows=at.map(t=>{const p=Math.round(Pnet(t)*100)/100;return[t.date,t.time||'',t.symbol,t.asset,t.dir,t.entry,t.exit,t.qty,t.mult,p,t.setup||'',t.tags.join('|'),`"${(t.notes||'').replace(/"/g,'""')}"`].join(',');});
+  // Headers match the import spec exactly so exported files can be re-imported
+  const headers='date,time,symbol,asset_class,direction,entry,exit,quantity,contract_multiplier,fee,pnl,setup,tags,notes,option_type,strike,expiry,underlying';
+  const rows=at.map(t=>{
+    const p=Math.round(Pnet(t)*100)/100;
+    const isOpt=t.asset==='Options';
+    return [
+      t.date,
+      t.time||'',
+      t.symbol,
+      t.asset,
+      t.dir,
+      t.entry,
+      t.exit,
+      t.qty,
+      t.mult,
+      t.fee||0,
+      p,
+      t.setup||'',
+      (t.tags||[]).join('|'),
+      '"'+(t.notes||'').replace(/"/g,'""')+'"',
+      isOpt?(t.optionType||''):'',
+      isOpt?(t.strike||''):'',
+      isOpt?(t.expiry||''):'',
+      isOpt?(t.underlying||''):''
+    ].join(',');
+  });
   const csv=[headers,...rows].join('\n');
   const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='tradeedge_trades.csv';a.click();URL.revokeObjectURL(url);
-  showNotif('Exported',`${at.length} trades exported as CSV`,'success');
+  showNotif('Exported',`${at.length} trade${at.length!==1?'s':''} exported — ready for re-import`,'success');
 }
 
 // ═══════════════════════════════════════
@@ -4947,6 +5375,51 @@ function handleCSV(inp){
     const hdrs = lines[0].split(delim).map(h => h.trim().toLowerCase().replace(/[^a-z0-9_]/g,''));
     let added = 0, errs = 0, errDetails = [];
     const base = Date.now();
+
+    // ── Date/time parsing helpers ──
+    function parseCSVDate(raw){
+      if(!raw) return new Date().toISOString().slice(0,10);
+      raw = raw.trim();
+      // Already ISO: 2025-03-14 or 2025-03-14T09:30 or 2025-03-14 09:30:00
+      if(/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0,10);
+      // MM/DD/YYYY or MM-DD-YYYY
+      const mdy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+      if(mdy) return mdy[3]+'-'+mdy[1].padStart(2,'0')+'-'+mdy[2].padStart(2,'0');
+      // DD-MM-YYYY (European)
+      const dmy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+      if(dmy && parseInt(dmy[1])>12) return (dmy[3].length===2?'20'+dmy[3]:dmy[3])+'-'+dmy[2].padStart(2,'0')+'-'+dmy[1].padStart(2,'0');
+      // Fallback
+      return new Date().toISOString().slice(0,10);
+    }
+
+    function parseCSVTime(raw){
+      if(!raw) return '09:30';
+      raw = raw.trim();
+      // HH:MM or HH:MM:SS (24h)
+      const hms = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+      if(hms) return hms[1].padStart(2,'0')+':'+hms[2];
+      // 9:30 AM / 12:00 PM (12h)
+      const ampm = raw.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+      if(ampm){
+        let h = parseInt(ampm[1]);
+        const m = ampm[2];
+        const isPM = ampm[3].toUpperCase()==='PM';
+        if(isPM && h!==12) h+=12;
+        if(!isPM && h===12) h=0;
+        return String(h).padStart(2,'0')+':'+m;
+      }
+      return '09:30';
+    }
+
+    function splitDateTime(dateRaw, timeRaw){
+      // If dateRaw contains a space or T, it may be a combined datetime
+      if(dateRaw && /[ T]\d{1,2}:\d{2}/.test(dateRaw)){
+        const parts = dateRaw.split(/[ T]/);
+        return { date: parseCSVDate(parts[0]), time: parseCSVTime(parts.slice(1).join(' ')) };
+      }
+      return { date: parseCSVDate(dateRaw), time: parseCSVTime(timeRaw) };
+    }
+
     for(let i = 1; i < lines.length; i++){
       const v = lines[i].split(delim);
       if(v.length < 4){ errs++; errDetails.push('Row '+i+': too few columns'); continue; }
@@ -4961,14 +5434,22 @@ function handleCSV(inp){
           errs++; errDetails.push('Row '+i+': invalid entry/exit prices'); continue;
         }
         const dir = (row.direction||row.dir||'Long');
-        const normDir = dir.charAt(0).toUpperCase() + dir.slice(1).toLowerCase();
+        // Accept Long/Short, Buy/Sell, B/S, L/S
+        let normDir = dir.charAt(0).toUpperCase() + dir.slice(1).toLowerCase();
+        if(['Buy','B','Long'].includes(normDir.charAt(0).toUpperCase()+normDir.slice(1))) normDir = 'Long';
+        if(['Sell','S','Short'].includes(normDir.charAt(0).toUpperCase()+normDir.slice(1))) normDir = 'Short';
+        if(!['Long','Short'].includes(normDir)) normDir = normDir.toLowerCase().includes('s') ? 'Short' : 'Long';
         const _csvAsset = row.asset_class || row.asset || 'Stocks';
         const _csvIsOpt = _csvAsset === 'Options';
+        const { date: parsedDate, time: parsedTime } = splitDateTime(
+          row.date||row.datetime||row.trade_date||row.tradedate||row.entry_date||'',
+          row.time||row.datetime_time||row.entry_time||row.entrytime||row.trade_time||''
+        );
         trades.push({
           id: base + i,
           accountId: activeAccountId,
-          date: row.date || new Date().toISOString().slice(0,10),
-          time: row.time || '09:30',
+          date: parsedDate,
+          time: parsedTime,
           symbol: (row.symbol||'UNKNOWN').toUpperCase(),
           asset: _csvAsset,
           dir: ['Long','Short'].includes(normDir) ? normDir : 'Long',
@@ -5087,10 +5568,20 @@ function initAppearance() {
 
   const bgOpts = document.getElementById('bg-style-opts');
   if(bgOpts) bgOpts.innerHTML = [
-    {id:'dark', label:'Dark', desc:'Classic dark theme'},
-    {id:'darker', label:'Darker', desc:'Deep black surfaces'},
-    {id:'midnight', label:'Midnight', desc:'Navy midnight tones'},
-  ].map(o => `<div onclick="applyBgStyle('${o.id}')" style="flex:1;min-width:100px;max-width:160px;background:${appSettings.bgStyle===o.id?'rgba(0,212,255,.1)':'var(--bg3)'};border:1px solid ${appSettings.bgStyle===o.id?'var(--cyan)':'var(--bdr)'};border-radius:9px;padding:12px 14px;cursor:pointer;transition:all .15s"><div style="font-size:12px;font-weight:600;margin-bottom:2px">${o.label}</div><div style="font-size:10px;color:var(--text2)">${o.desc}</div></div>`).join('');
+    {id:'darker', label:'Darkest', desc:'Deep near-black surfaces'},
+    {id:'dark',   label:'Dark',    desc:'Classic dark (default)'},
+    {id:'midnight',label:'Midnight',desc:'Navy midnight tones'},
+    {id:'slate',  label:'Slate',   desc:'Lighter slate — easier contrast'},
+    {id:'dim',    label:'Dim',     desc:'Soft blue-grey, most visible'},
+  ].map(o => {
+    const isSel = appSettings.bgStyle===o.id;
+    const isLighter = o.id==='slate'||o.id==='dim';
+    return `<div onclick="applyBgStyle('${o.id}')" style="flex:1;min-width:90px;max-width:150px;background:${isSel?'rgba(0,212,255,.1)':'var(--bg3)'};border:1px solid ${isSel?'var(--cyan)':'var(--bdr)'};border-radius:9px;padding:10px 12px;cursor:pointer;transition:all .15s;position:relative">
+      ${isLighter?`<span style="position:absolute;top:6px;right:6px;font-size:8px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;background:rgba(0,230,118,.15);color:var(--green);border:1px solid rgba(0,230,118,.25);border-radius:4px;padding:1px 5px">New</span>`:''}
+      <div style="font-size:12px;font-weight:600;margin-bottom:2px">${o.label}</div>
+      <div style="font-size:10px;color:var(--text2)">${o.desc}</div>
+    </div>`;
+  }).join('');
 
   const sbOpts = document.getElementById('sidebar-style-opts');
   if(sbOpts) sbOpts.innerHTML = [
@@ -5125,13 +5616,36 @@ function applyBgStyle(style) {
     dark:{bg:'#080c14',bg2:'#0d1421',bg3:'#111c2e',bg4:'#162236'},
     darker:{bg:'#040609',bg2:'#08101a',bg3:'#0c1624',bg4:'#10202e'},
     midnight:{bg:'#060a18',bg2:'#0a1228',bg3:'#0e1a36',bg4:'#122240'},
+    slate:{bg:'#141b27',bg2:'#1c2537',bg3:'#222e42',bg4:'#2a394f'},
+    dim:{bg:'#1a1f2e',bg2:'#222840',bg3:'#293252',bg4:'#313d60'},
   };
   const s = styles[style] || styles.dark;
   const root = document.documentElement;
-  root.style.setProperty('--bg', s.bg);
+  root.style.setProperty('--bg',  s.bg);
   root.style.setProperty('--bg2', s.bg2);
   root.style.setProperty('--bg3', s.bg3);
   root.style.setProperty('--bg4', s.bg4);
+  // Derive bg5 and adjust border/text visibility for lighter modes
+  if(style === 'slate') {
+    root.style.setProperty('--bg5',  '#354760');
+    root.style.setProperty('--bdr',  'rgba(255,255,255,0.09)');
+    root.style.setProperty('--bdr2', 'rgba(255,255,255,0.16)');
+    root.style.setProperty('--text2','#8a9bb8');
+    root.style.setProperty('--text3','#4a6080');
+  } else if(style === 'dim') {
+    root.style.setProperty('--bg5',  '#3d4d70');
+    root.style.setProperty('--bdr',  'rgba(255,255,255,0.11)');
+    root.style.setProperty('--bdr2', 'rgba(255,255,255,0.18)');
+    root.style.setProperty('--text2','#8fa4c4');
+    root.style.setProperty('--text3','#556890');
+  } else {
+    // Reset to default for darker modes
+    root.style.setProperty('--bg5',  '#1e2d40');
+    root.style.setProperty('--bdr',  'rgba(255,255,255,0.06)');
+    root.style.setProperty('--bdr2', 'rgba(255,255,255,0.12)');
+    root.style.setProperty('--text2','#7a8ba0');
+    root.style.setProperty('--text3','#3d5068');
+  }
   initAppearance();
   showNotif('Background updated', '', 'success');
 }
@@ -5139,17 +5653,38 @@ function applyBgStyle(style) {
 function applySidebarStyle(style) {
   appSettings.sidebarStyle = style;
   const sb = document.getElementById('sidebar');
-  const bn = document.querySelector('.bottom-nav');
-  if(style === 'expanded') {
-    if(sb) sb.classList.add('expanded');
-  } else if(style === 'hidden') {
-    if(sb) { sb.style.display = 'none'; }
-    if(bn) bn.style.display = 'flex';
-  } else {
-    if(sb) { sb.classList.remove('expanded'); sb.style.display = ''; }
+  const bns = document.querySelectorAll('.bottom-nav');
+
+  // ── Reset all to clean state ──
+  if(sb) {
+    sb.style.display = '';
+    sb.classList.remove('expanded');
   }
+  bns.forEach(bn => {
+    bn.style.display = '';
+    bn.style.removeProperty('display');
+    bn.classList.remove('bn-force-hide');
+  });
+
+  if(style === 'expanded') {
+    // Full sidebar with labels, no bottom nav
+    if(sb) sb.classList.add('expanded');
+    bns.forEach(bn => bn.classList.add('bn-force-hide'));
+  } else if(style === 'hidden') {
+    // Bottom-nav only — hide sidebar, show bottom nav
+    if(sb) sb.style.display = 'none';
+    bns.forEach(bn => {
+      bn.classList.remove('bn-force-hide');
+      bn.style.display = 'flex';
+    });
+  } else {
+    // 'icon' — compact sidebar icons, no bottom nav
+    if(sb) sb.style.display = '';
+    bns.forEach(bn => bn.classList.add('bn-force-hide'));
+  }
+
   initAppearance();
-  showNotif('Sidebar style updated', '', 'success');
+  showNotif('Sidebar style updated', style === 'icon' ? 'Icons only' : style === 'expanded' ? 'Expanded sidebar' : 'Bottom navigation', 'success');
 }
 
 function applyCSSVars(accent, profit, loss) {
@@ -5424,6 +5959,8 @@ function initSettings() {
 function switchAccount(id){
   if(id===activeAccountId) return;
   activeAccountId=id;
+  // Clear any bulk selection when switching accounts
+  if(typeof _bulkSelected !== 'undefined') { _bulkSelected.clear(); }
   closeAccDropdown();
   updateAccSelector();
   // Re-render all active data views
@@ -7454,7 +7991,8 @@ function enterApp() {
   if(nameEl) nameEl.textContent = currentUser.displayName;
   if(ddNameEl) ddNameEl.textContent = currentUser.displayName;
   if(avatarEl) avatarEl.textContent = currentUser.displayName.charAt(0).toUpperCase();
-  // Boot the app
+  // Boot the app — apply saved sidebar style
+  applySidebarStyle(appSettings.sidebarStyle || 'icon');
   updateAccSelector();
   nav('home');
   startAutoSave();
@@ -8304,12 +8842,6 @@ function doDeleteAllProfiles() {
 let _hwStep = 0;
 const HW_STEPS = 6;
 
-function openHowToModal() {
-  _hwStep = 0;
-  hwRender();
-  document.getElementById('howto-modal').classList.add('open');
-}
-
 function hwTab(idx, el) {
   _hwStep = idx;
   hwRender();
@@ -8335,9 +8867,9 @@ function hwRender() {
   const ctr  = document.getElementById('hwto-counter');
   if(prev) prev.style.display = _hwStep > 0 ? 'inline-flex' : 'none';
   if(next) {
-    next.textContent = _hwStep === HW_STEPS - 1 ? "Let's go! 🚀" : 'Next →';
+    next.textContent = _hwStep === HW_STEPS - 1 ? "Let's go! →" : 'Next →';
     next.onclick = _hwStep === HW_STEPS - 1
-      ? () => { closeModal('howto-modal'); showNotif("All set!", "Head to Settings to configure your account 🚀", 'success'); }
+      ? () => { closeModal('howto-modal'); startTour(); }
       : () => hwNav(1);
   }
   if(ctr) ctr.textContent = 'Step ' + (_hwStep + 1) + ' of ' + HW_STEPS;
@@ -8346,6 +8878,357 @@ function hwRender() {
   if(sc) sc.scrollTop = 0;
 }
 
+
+
+// ═══════════════════════════════════════════════════════════
+// INTERACTIVE GUIDED TOUR ENGINE
+// ═══════════════════════════════════════════════════════════
+
+const TOUR_STEPS = [
+  {
+    page: null,
+    target: null,
+    title: '👋 Welcome to TradeEdge Pro!',
+    body: `Your <strong>private trading journal</strong> — everything stored on your device, no cloud, no subscriptions.<br><br>
+           This short tour walks you through every part of the app. Use <strong>Next →</strong> to advance, or click any dot to jump to a section.`,
+    pos: 'center',
+  },
+  {
+    page: 'home',
+    target: '#sbi-home',
+    title: '🏠 The Sidebar',
+    body: `The sidebar on the left is your main navigation. Each icon takes you to a section. Hover any icon to see its label.<br><br>
+           The <strong>active page</strong> icon lights up in <span style="color:var(--cyan)">cyan</span>. On mobile you'll use the bottom navigation bar instead.`,
+    pos: 'right',
+  },
+  {
+    page: 'home',
+    target: '#acc-selector-btn',
+    title: '🏦 Account Switcher',
+    body: `Click here to switch between your trading accounts. Each account has its own <strong>balance</strong>, <strong>trades</strong>, and <strong>P&L</strong>.<br><br>
+           Add more accounts in <strong>Settings → Account → Trading Accounts</strong>. You can run Live, Demo, Prop, and Options accounts side by side.`,
+    pos: 'bottom',
+  },
+  {
+    page: 'home',
+    target: '#pg-home .h-stats-strip, #pg-home .sum-strip, #pg-home',
+    title: '🏠 Home Dashboard',
+    body: `Your morning command centre. Check your <strong>mood</strong>, see today's quick stats, and review recent trades.<br><br>
+           If you select <strong>2 or more negative emotions</strong>, the app fires a <strong>DO NOT TRADE</strong> alarm — a powerful circuit-breaker for emotional trading.`,
+    pos: 'center',
+  },
+  {
+    page: 'log',
+    target: '#ls-details',
+    title: '➕ Add Trade — 5-Step Wizard',
+    body: `Click <strong>➕ Add Trade</strong> in the sidebar to open this wizard. The steps are:<br><br>
+           <strong>1 Details</strong> — symbol, direction, entry/exit, quantity, fee<br>
+           <strong>2 Setup</strong> — your setup type and market conditions<br>
+           <strong>3 Tags</strong> — emotion, strategy, and mistake labels<br>
+           <strong>4 Media</strong> — chart screenshots<br>
+           <strong>5 Notes</strong> — pre, during, and post-trade journal`,
+    pos: 'bottom',
+  },
+  {
+    page: 'log',
+    target: '#lp-details',
+    title: '📝 Trade Details',
+    body: `Fill in your <strong>symbol</strong>, choose <strong>Long or Short</strong>, then enter your <strong>entry and exit prices</strong>.<br><br>
+           The <strong>P&L preview</strong> updates live as you type. For <strong>Options</strong> select it in Asset Class and extra fields appear for strike, expiry, and contract type. Commission / fees are subtracted automatically if you enable that setting.`,
+    pos: 'right',
+  },
+  {
+    page: 'trades',
+    target: '#pg-trades',
+    title: '📋 Trade Log',
+    body: `Every trade you log appears here. Use the <strong>filter bar</strong> to narrow by asset, direction, setup, or win/loss.<br><br>
+           <strong>Click any row</strong> to expand it and see full notes, media, and setup details. Use the <strong>✎ edit</strong> button to update any field.<br><br>
+           Tick the <strong>checkboxes</strong> to select multiple trades for bulk deletion.`,
+    pos: 'center',
+  },
+  {
+    page: 'calendar',
+    target: '#c-grid, #pg-calendar',
+    title: '📅 Trade Calendar',
+    body: `Each day cell shows net P&L and trade count. <strong>Green</strong> = profitable, <strong>Red</strong> = losing. Brighter = bigger.<br><br>
+           <strong>Click any day</strong> to open its side panel — log a trade, run your <strong>🌅 Pre-Session</strong> or <strong>📋 Pre-Trade</strong> checklist, and edit or delete trades directly.`,
+    pos: 'center',
+  },
+  {
+    page: 'dashboard',
+    target: '#pg-dashboard',
+    title: '📊 Dashboard',
+    body: `Your performance at a glance. The top cards show <strong>Balance</strong> (starting + all-time net P&L), <strong>Win Rate</strong>, and <strong>Profit Factor</strong>.<br><br>
+           The <strong>equity curve</strong> plots your running balance trade-by-trade. A steady upward slope is the goal — drawdown dips show where your approach changed.`,
+    pos: 'center',
+  },
+  {
+    page: 'analytics',
+    target: '#pg-analytics',
+    title: '📈 Analytics',
+    body: `Three tabs of deep-dive data:<br><br>
+           <strong>Charts</strong> — P&L bar chart, win/loss doughnut, time-of-day and day-of-week heatmaps<br>
+           <strong>Stats</strong> — profit factor, Sharpe ratio, max drawdown, best/worst trade, streaks<br>
+           <strong>Asset</strong> — P&L and win rate split by Futures, Forex, Stocks, Crypto, and Options`,
+    pos: 'center',
+  },
+  {
+    page: 'checklist',
+    target: '#pg-checklist',
+    title: '✅ Checklists',
+    body: `Two customisable checklists — <strong>Pre-Session</strong> (run before your trading day) and <strong>Pre-Trade</strong> (validate each setup before you enter).<br><br>
+           Hover any item to edit or delete it. Drag the <strong>⠿ handle</strong> to reorder. These checklists are what power the calendar's daily checklist buttons.`,
+    pos: 'center',
+  },
+  {
+    page: 'settings',
+    target: '#sbi-settings',
+    title: '⚙️ Settings',
+    body: `Configure everything here:<br><br>
+           <strong>Account</strong> — your name, greeting, password, trading accounts<br>
+           <strong>Appearance</strong> — colour theme, sidebar style<br>
+           <strong>Trading</strong> — default multipliers, include fees toggle<br>
+           <strong>Data</strong> — export/import JSON backup, install as PWA<br><br>
+           Back up your data regularly via <strong>Settings → Data → Export JSON</strong>!`,
+    pos: 'right',
+  },
+  {
+    page: null,
+    target: null,
+    title: "🚀 You're all set!",
+    body: `That's the full tour. Here's your quick-start checklist:<br><br>
+           ☐ Set your starting balance in <strong>Settings → Account</strong><br>
+           ☐ Customise your checklists in <strong>Checklist</strong><br>
+           ☐ Log your first trade using <strong>➕ Add Trade</strong><br>
+           ☐ Back up via <strong>Settings → Data → Export JSON</strong><br><br>
+           You can re-open this tour anytime from <strong>Settings → How to Use → Interactive Tour</strong>.`,
+    pos: 'center',
+  },
+];
+
+let _tourStep = 0;
+let _tourActive = false;
+let _tourRaf = null;
+
+function startTour() {
+  // Close any open modal first
+  document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+  _tourStep = 0;
+  _tourActive = true;
+  document.getElementById('tour-overlay').classList.add('active');
+  tourRender();
+}
+
+function tourSkip() {
+  _tourActive = false;
+  const overlay = document.getElementById('tour-overlay');
+  overlay.classList.remove('active');
+  // Fade out
+  overlay.style.opacity = '0';
+  overlay.style.transition = 'opacity .3s';
+  setTimeout(() => {
+    overlay.style.opacity = '';
+    overlay.style.transition = '';
+  }, 300);
+  showNotif('Tour closed', 'Reopen anytime from Settings → How to Use', 'info');
+}
+
+function tourNav(dir) {
+  const next = _tourStep + dir;
+  if(next < 0 || next >= TOUR_STEPS.length) {
+    if(next >= TOUR_STEPS.length) tourFinish();
+    return;
+  }
+  _tourStep = next;
+  tourRender();
+}
+
+function tourJump(idx) {
+  _tourStep = idx;
+  tourRender();
+}
+
+function tourFinish() {
+  _tourActive = false;
+  const overlay = document.getElementById('tour-overlay');
+  overlay.style.transition = 'opacity .4s';
+  overlay.style.opacity = '0';
+  setTimeout(() => {
+    overlay.classList.remove('active');
+    overlay.style.opacity = '';
+    overlay.style.transition = '';
+  }, 400);
+  showNotif("You're all set! 🚀", "Head to Settings → Account to add your starting balance", 'success');
+}
+
+function tourRender() {
+  const step = TOUR_STEPS[_tourStep];
+  const total = TOUR_STEPS.length;
+  const isFirst = _tourStep === 0;
+  const isLast  = _tourStep === total - 1;
+
+  // Navigate the app to the right page
+  if(step.page && typeof nav === 'function') {
+    const curPage = document.querySelector('.page.active')?.id?.replace('pg-','');
+    if(curPage !== step.page) nav(step.page);
+  }
+
+  // Update progress bar
+  const prog = document.getElementById('tour-progress');
+  if(prog) prog.style.width = ((_tourStep + 1) / total * 100) + '%';
+
+  // Update card content (fade trick)
+  const card = document.getElementById('tour-card');
+  if(card) {
+    card.classList.remove('tc-visible');
+    card.classList.add('tc-entering');
+  }
+
+  document.getElementById('tc-badge').textContent  = 'Step ' + (_tourStep + 1) + ' of ' + total;
+  document.getElementById('tc-title').textContent  = step.title;
+  document.getElementById('tc-body').innerHTML     = step.body;
+
+  // Dots
+  const dotsEl = document.getElementById('tc-dots');
+  if(dotsEl) {
+    dotsEl.innerHTML = TOUR_STEPS.map((_, i) =>
+      `<div class="tc-dot${i === _tourStep ? ' active' : ''}" onclick="tourJump(${i})" title="Step ${i+1}"></div>`
+    ).join('');
+  }
+
+  // Prev/Next buttons
+  const prevBtn = document.getElementById('tc-prev-btn');
+  const nextBtn = document.getElementById('tc-next-btn');
+  if(prevBtn) prevBtn.style.display = isFirst ? 'none' : 'inline-flex';
+  if(nextBtn) nextBtn.textContent = isLast ? "Let's go! 🚀" : 'Next →';
+  if(nextBtn) nextBtn.onclick = isLast ? tourFinish : () => tourNav(1);
+
+  // Spotlight after brief delay to allow page nav to settle
+  setTimeout(() => tourSpotlight(step), 250);
+
+  // Fade in card
+  setTimeout(() => {
+    if(card) { card.classList.remove('tc-entering'); card.classList.add('tc-visible'); }
+  }, 100);
+}
+
+function tourSpotlight(step) {
+  const overlay = document.getElementById('tour-overlay');
+  const ring    = document.getElementById('tour-ring');
+  const hole    = document.getElementById('tour-hole');
+  const card    = document.getElementById('tour-card');
+  const arrow   = document.getElementById('tour-arrow');
+
+  if(!overlay || !ring || !hole || !card) return;
+
+  const oRect = overlay.getBoundingClientRect();
+  const W = overlay.offsetWidth;
+  const H = overlay.offsetHeight;
+  const PAD = 10; // padding around spotlight
+
+  // Find the target element — try multiple selectors
+  let target = null;
+  if(step.target) {
+    const selectors = step.target.split(',').map(s => s.trim());
+    for(const sel of selectors) {
+      const el = document.querySelector(sel);
+      if(el) { target = el; break; }
+    }
+  }
+
+  if(!target || step.pos === 'center') {
+    // Full-page dim — no spotlight hole
+    hole.setAttribute('x', '-999');
+    hole.setAttribute('y', '-999');
+    hole.setAttribute('width', '0');
+    hole.setAttribute('height', '0');
+    ring.style.opacity = '0';
+    ring.classList.remove('pulsing');
+
+    // Centre the card
+    const cw = card.offsetWidth || 300;
+    const ch = card.offsetHeight || 200;
+    card.style.left = Math.max(12, (W - cw) / 2) + 'px';
+    card.style.top  = Math.max(60, (H - ch) / 2) + 'px';
+    arrow.style.display = 'none';
+    return;
+  }
+
+  // Get target bounding box relative to the overlay
+  const tRect = target.getBoundingClientRect();
+  const relX = tRect.left - oRect.left;
+  const relY = tRect.top  - oRect.top;
+  const sX = relX - PAD;
+  const sY = relY - PAD;
+  const sW = tRect.width  + PAD * 2;
+  const sH = tRect.height + PAD * 2;
+
+  // Animate SVG hole
+  hole.setAttribute('x',      Math.max(0, sX).toFixed(0));
+  hole.setAttribute('y',      Math.max(0, sY).toFixed(0));
+  hole.setAttribute('width',  sW.toFixed(0));
+  hole.setAttribute('height', sH.toFixed(0));
+
+  // Glow ring
+  ring.style.left    = Math.max(0, sX) + 'px';
+  ring.style.top     = Math.max(0, sY) + 'px';
+  ring.style.width   = sW + 'px';
+  ring.style.height  = sH + 'px';
+  ring.style.opacity = '1';
+  ring.classList.add('pulsing');
+
+  // Position card based on preferred direction
+  const cardW = 300;
+  const cardH = 220; // estimate
+  const MARGIN = 18;
+  let cx, cy;
+  const pos = step.pos || 'bottom';
+
+  if(pos === 'right') {
+    cx = sX + sW + MARGIN;
+    cy = sY + sH / 2 - cardH / 2;
+    // Arrow pointing left
+    arrow.style.display = 'block';
+    arrow.style.left = (cx - 8) + 'px';
+    arrow.style.top  = (sY + sH / 2 - 7) + 'px';
+    arrow.style.borderTopColor = 'transparent';
+    arrow.style.borderRightColor = 'transparent';
+    arrow.style.clipPath = 'polygon(0 50%,100% 0,100% 100%)';
+  } else if(pos === 'left') {
+    cx = sX - cardW - MARGIN;
+    cy = sY + sH / 2 - cardH / 2;
+    arrow.style.display = 'block';
+    arrow.style.left = (cx + cardW - 6) + 'px';
+    arrow.style.top  = (sY + sH / 2 - 7) + 'px';
+    arrow.style.clipPath = 'polygon(0 0,100% 50%,0 100%)';
+  } else {
+    // 'bottom' — card below target
+    cx = sX + sW / 2 - cardW / 2;
+    cy = sY + sH + MARGIN;
+    arrow.style.display = 'block';
+    arrow.style.left = (sX + sW / 2 - 7) + 'px';
+    arrow.style.top  = (cy - 8) + 'px';
+    arrow.style.clipPath = 'polygon(0 100%,50% 0,100% 100%)';
+  }
+
+  // Clamp card to within overlay
+  cx = Math.max(12, Math.min(W - cardW - 12, cx));
+  cy = Math.max(60, Math.min(H - cardH - 12, cy));
+
+  // If card would overlap target, flip it
+  if(pos === 'right' && cx + cardW > W - 12) {
+    cx = sX - cardW - MARGIN;
+    cx = Math.max(12, cx);
+  }
+
+  card.style.left = cx + 'px';
+  card.style.top  = cy + 'px';
+}
+
+// Update openHowToModal to launch the interactive tour directly
+function openHowToModal() {
+  startTour();
+}
 
 function showNotif(title,msg,type='info'){const stack=document.getElementById('notif-stack');if(!stack)return;const id='n'+nid++;const tc={info:'',danger:'nd',success:'ns',warn:'nw'};const div=document.createElement('div');div.className=`notif ${tc[type]||''}`;div.id=id;div.innerHTML=`<div style="flex:1"><div style="font-size:12px;font-weight:600;margin-bottom:2px">${title}</div>${msg?`<div style="font-size:11px;color:var(--text2);line-height:1.4">${msg}</div>`:''}</div><div style="color:var(--text3);font-size:14px;cursor:pointer;flex-shrink:0" onclick="document.getElementById('${id}').remove()">×</div>`;stack.appendChild(div);setTimeout(()=>{const e=document.getElementById(id);if(e){e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(()=>{const x=document.getElementById(id);if(x)x.remove();},300);}},6000);}
 
