@@ -830,6 +830,23 @@ tr:hover td{background:rgba(255,255,255,.015)}
 #tour-ring.pulsing{animation:tourPulse 2s ease infinite;}
 
 </style>
+  <!-- Firebase SDK (loaded only when user configures it) -->
+  <script>
+    // Firebase is loaded on-demand when the user provides config
+    window._fbLoaded = false;
+    function loadFirebaseSDK(callback) {
+      if(window._fbLoaded) { callback(); return; }
+      const sdk1 = document.createElement('script');
+      sdk1.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js';
+      sdk1.onload = () => {
+        const sdk2 = document.createElement('script');
+        sdk2.src = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js';
+        sdk2.onload = () => { window._fbLoaded = true; callback(); };
+        document.head.appendChild(sdk2);
+      };
+      document.head.appendChild(sdk1);
+    }
+  </script>
 </head>
 <body>
 
@@ -1056,6 +1073,8 @@ tr:hover td{background:rgba(255,255,255,.015)}
   <!-- ════════════ NOTIFICATIONS ════════════ -->
   <div class="notif-stack" id="notif-stack"></div>
 
+
+
   <!-- ════════════ DRAWER (mobile) ════════════ -->
   <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
   <div class="drawer" id="drawer">
@@ -1083,6 +1102,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
     <div class="drawer-item" onclick="nav('plan');closeDrawer()" id="di-plan"><span class="drawer-item-icon">🎯</span>Trading Plan</div>
     <div class="drawer-item" onclick="nav('alerts');closeDrawer()" id="di-alerts"><span class="drawer-item-icon">🔔</span>Alerts<span class="drawer-badge" id="drawer-badge">2</span></div>
     <div class="drawer-item" onclick="nav('tags');closeDrawer()" id="di-tags"><span class="drawer-item-icon">🏷️</span>Tag Manager</div>
+    <div class="drawer-item" onclick="nav('outlook');closeDrawer()" id="di-outlook"><span class="drawer-item-icon">🔭</span>Outlook</div>
     <div class="drawer-item" onclick="nav('settings');closeDrawer()" id="di-settings"><span class="drawer-item-icon">⚙️</span>Settings</div>
   </div>
 
@@ -1106,8 +1126,9 @@ tr:hover td{background:rgba(255,255,255,.015)}
       <div class="sb-label">Tools</div>
       <div class="sb-item" onclick="nav('checklist')" id="sbi-checklist">✅<span class="sb-text">Checklist</span><span class="sb-tip">Checklist</span></div>
       <div class="sb-item" onclick="nav('plan')" id="sbi-plan">🎯<span class="sb-text">Trading Plan</span><span class="sb-tip">Trading Plan</span></div>
-      <div class="sb-item" onclick="nav('alerts')" id="sbi-alerts">🔔<span class="sb-text">Alerts</span><span class="sb-tip">Alerts</span><span class="sb-dot on" id="al-dot"></span></div>
+      <div class="sb-item" onclick="nav('alerts')" id="sbi-alerts">🔔<span class="sb-text">Alerts</span><span class="sb-tip">Alerts</span><span class="sb-dot" id="al-dot"></span></div>
       <div class="sb-item" onclick="nav('tags')" id="sbi-tags">🏷️<span class="sb-text">Tag Manager</span><span class="sb-tip">Tag Manager</span></div>
+      <div class="sb-item" onclick="nav('outlook')" id="sbi-outlook">🔭<span class="sb-text">Outlook</span><span class="sb-tip">Market Outlook</span></div>
       <div class="sb-item" onclick="nav('settings')" id="sbi-settings">⚙️<span class="sb-text">Settings</span><span class="sb-tip">Settings</span></div>
     </div>
     <div class="sb-collapse" onclick="toggleSidebar()" id="sb-collapse-btn" title="Expand sidebar">⇄</div>
@@ -1190,12 +1211,15 @@ tr:hover td{background:rgba(255,255,255,.015)}
             <button class="q-btn" onclick="nav('checklist')">✅ Checklist</button>
             <button class="q-btn" onclick="nav('dashboard')">📊 Dashboard</button>
             <button class="q-btn" onclick="nav('calendar')">📅 Calendar</button>
+            <button class="q-btn" onclick="nav('outlook')" style="gap:5px">🔭 Outlook</button>
           </div>
           <div class="card" style="margin-bottom:14px">
             <div class="sec">How are you feeling?</div>
             <div class="mood-row" id="hmood"></div>
             <div style="margin-top:8px;font-size:11px;color:var(--text3)" id="mood-st">Select your current emotional state</div>
           </div>
+          <!-- Market Outlook summary (shown when bias is set) -->
+          <div id="h-outlook-summary" class="card" style="margin-bottom:14px;display:none"></div>
           <div class="g4" style="margin-bottom:14px" id="h-stats"></div>
           <div class="card">
             <div class="sec">Recent Trades</div>
@@ -1205,6 +1229,340 @@ tr:hover td{background:rgba(255,255,255,.015)}
             </div>
             <button class="btn btn-g" style="width:100%;margin-top:12px;font-size:11px;justify-content:center" onclick="nav('trades')">View All Trades →</button>
           </div>
+        </div>
+      </div>
+
+      <!-- ═══ MARKET OUTLOOK ═══ -->
+      <div class="page" id="pg-outlook">
+        <div style="max-width:860px">
+
+          <!-- Header strip -->
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+            <div>
+              <div style="font-family:var(--head);font-size:20px;font-weight:800">🔭 Market Outlook</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:2px">Record your analysis and directional bias for each timeframe</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn btn-c btn-sm" onclick="saveOutlook()">💾 Save</button>
+              <button class="btn btn-g btn-sm" onclick="exportOutlook('pdf')" title="Download as PDF">📄 PDF</button>
+              <button class="btn btn-g btn-sm" onclick="exportOutlook('csv')" title="Download as CSV">📊 CSV</button>
+              <button class="btn btn-g btn-sm" onclick="clearOutlook()">↺ Clear All</button>
+            </div>
+          </div>
+
+          <!-- Timeframe tab bar -->
+          <div style="display:flex;gap:3px;background:var(--bg3);border-radius:10px;padding:4px;margin-bottom:16px;border:1px solid var(--bdr)">
+            <div class="tab active" style="flex:1;text-align:center;border-radius:8px" onclick="outlookTab('daily',this)" id="ot-daily">📅 Daily</div>
+            <div class="tab" style="flex:1;text-align:center;border-radius:8px" onclick="outlookTab('weekly',this)" id="ot-weekly">📆 Weekly</div>
+            <div class="tab" style="flex:1;text-align:center;border-radius:8px" onclick="outlookTab('monthly',this)" id="ot-monthly">🗓 Monthly</div>
+          </div>
+
+          <!-- ── DAILY ── -->
+          <div id="op-daily">
+            <div class="g2" style="margin-bottom:14px">
+
+              <!-- Bias card -->
+              <div class="card" style="margin-bottom:0">
+                <div class="sec">Directional Bias</div>
+                <div style="display:flex;gap:8px;margin-bottom:12px">
+                  <div onclick="setOutlookBias('daily','bullish',this)" id="ob-daily-bullish"
+                    class="outlook-bias-btn" style="flex:1;text-align:center;padding:10px;border-radius:9px;cursor:pointer;transition:all .18s;border:1.5px solid var(--bdr2);background:var(--bg3);font-size:12px;font-weight:600">
+                    🟢 Bullish
+                  </div>
+                  <div onclick="setOutlookBias('daily','neutral',this)" id="ob-daily-neutral"
+                    class="outlook-bias-btn" style="flex:1;text-align:center;padding:10px;border-radius:9px;cursor:pointer;transition:all .18s;border:1.5px solid var(--bdr2);background:var(--bg3);font-size:12px;font-weight:600">
+                    ⚪ Neutral
+                  </div>
+                  <div onclick="setOutlookBias('daily','bearish',this)" id="ob-daily-bearish"
+                    class="outlook-bias-btn" style="flex:1;text-align:center;padding:10px;border-radius:9px;cursor:pointer;transition:all .18s;border:1.5px solid var(--bdr2);background:var(--bg3);font-size:12px;font-weight:600">
+                    🔴 Bearish
+                  </div>
+                </div>
+                <div class="fg" style="margin-bottom:0">
+                  <label>Conviction Level</label>
+                  <div style="display:flex;gap:5px;margin-top:6px" id="ob-daily-conv"></div>
+                </div>
+              </div>
+
+              <!-- Key levels card -->
+              <div class="card" style="margin-bottom:0">
+                <div class="sec">Key Levels</div>
+                <div class="g2" style="margin-bottom:8px">
+                  <div class="fg" style="margin-bottom:0"><label>Resistance 1</label><input id="od-r1" type="text" placeholder="e.g. 5,280"></div>
+                  <div class="fg" style="margin-bottom:0"><label>Resistance 2</label><input id="od-r2" type="text" placeholder="e.g. 5,320"></div>
+                </div>
+                <div class="g2" style="margin-bottom:8px">
+                  <div class="fg" style="margin-bottom:0"><label>Support 1</label><input id="od-s1" type="text" placeholder="e.g. 5,220"></div>
+                  <div class="fg" style="margin-bottom:0"><label>Support 2</label><input id="od-s2" type="text" placeholder="e.g. 5,180"></div>
+                </div>
+                <div class="fg" style="margin-bottom:0">
+                  <label>POC / VWAP / Key Pivot</label>
+                  <input id="od-poc" type="text" placeholder="e.g. 5,250 VWAP">
+                </div>
+              </div>
+            </div>
+
+            <!-- Catalysts -->
+            <div class="card" style="margin-bottom:14px">
+              <div class="sec">Catalysts & News Events</div>
+              <div class="g3" style="margin-bottom:10px">
+                <div class="fg" style="margin-bottom:0"><label>Economic Event</label><input id="od-event1" type="text" placeholder="e.g. CPI 8:30 AM ET"></div>
+                <div class="fg" style="margin-bottom:0"><label>Event 2</label><input id="od-event2" type="text" placeholder="e.g. FOMC Minutes"></div>
+                <div class="fg" style="margin-bottom:0"><label>Event 3</label><input id="od-event3" type="text" placeholder="e.g. Earnings — AAPL"></div>
+              </div>
+              <div class="fg" style="margin-bottom:0">
+                <label>Expected Impact <span style="font-size:10px;color:var(--text3)">(optional)</span></label>
+                <input id="od-impact" type="text" placeholder="e.g. CPI beat likely → gap up; watch 5,280 resistance">
+              </div>
+            </div>
+
+            <!-- Analysis -->
+            <div class="card" style="margin-bottom:14px">
+              <div class="sec">Daily Analysis & Plan</div>
+              <div class="fg" style="margin-bottom:10px">
+                <label>Pre-Market Analysis</label>
+                <textarea id="od-premarket" rows="4" placeholder="What does overnight price action tell you? Any gap? How is the broader market positioned?"></textarea>
+              </div>
+              <div class="fg" style="margin-bottom:10px">
+                <label>Trade Plan for Today</label>
+                <textarea id="od-plan" rows="4" placeholder="What setups are you watching? What are your entry conditions, targets, and invalidation levels?"></textarea>
+              </div>
+              <div class="fg" style="margin-bottom:0">
+                <label>What I will NOT do today</label>
+                <textarea id="od-avoid" rows="2" placeholder="e.g. No counter-trend trades before 10 AM. No trading during lunch chop (12–1 PM)."></textarea>
+              </div>
+            </div>
+
+            <!-- End-of-day review -->
+            <div class="card">
+              <div class="sec">End-of-Day Review <span style="font-weight:400;color:var(--text3);font-size:11px">(fill in after session)</span></div>
+              <div class="g2" style="margin-bottom:10px">
+                <div class="fg" style="margin-bottom:0"><label>Did bias play out?</label>
+                  <select id="od-bias-result">
+                    <option value="">— Select —</option>
+                    <option>Yes — exactly as expected</option>
+                    <option>Partially</option>
+                    <option>No — opposite direction</option>
+                    <option>Choppy / no clear direction</option>
+                  </select>
+                </div>
+                <div class="fg" style="margin-bottom:0"><label>Session Grade</label>
+                  <select id="od-grade">
+                    <option value="">— Grade —</option>
+                    <option>A — Executed perfectly</option>
+                    <option>B — Minor deviations</option>
+                    <option>C — Several mistakes</option>
+                    <option>D — Did not follow plan</option>
+                    <option>F — Should not have traded</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fg" style="margin-bottom:0">
+                <label>Lessons Learned</label>
+                <textarea id="od-lessons" rows="3" placeholder="What worked? What didn't? What will you adjust tomorrow?"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── WEEKLY ── -->
+          <div id="op-weekly" style="display:none">
+            <div class="g2" style="margin-bottom:14px">
+              <div class="card" style="margin-bottom:0">
+                <div class="sec">Weekly Bias</div>
+                <div style="display:flex;gap:8px;margin-bottom:12px">
+                  <div onclick="setOutlookBias('weekly','bullish',this)" id="ob-weekly-bullish"
+                    class="outlook-bias-btn" style="flex:1;text-align:center;padding:10px;border-radius:9px;cursor:pointer;transition:all .18s;border:1.5px solid var(--bdr2);background:var(--bg3);font-size:12px;font-weight:600">
+                    🟢 Bullish
+                  </div>
+                  <div onclick="setOutlookBias('weekly','neutral',this)" id="ob-weekly-neutral"
+                    class="outlook-bias-btn" style="flex:1;text-align:center;padding:10px;border-radius:9px;cursor:pointer;transition:all .18s;border:1.5px solid var(--bdr2);background:var(--bg3);font-size:12px;font-weight:600">
+                    ⚪ Neutral
+                  </div>
+                  <div onclick="setOutlookBias('weekly','bearish',this)" id="ob-weekly-bearish"
+                    class="outlook-bias-btn" style="flex:1;text-align:center;padding:10px;border-radius:9px;cursor:pointer;transition:all .18s;border:1.5px solid var(--bdr2);background:var(--bg3);font-size:12px;font-weight:600">
+                    🔴 Bearish
+                  </div>
+                </div>
+                <div class="fg" style="margin-bottom:0">
+                  <label>Conviction Level</label>
+                  <div style="display:flex;gap:5px;margin-top:6px" id="ob-weekly-conv"></div>
+                </div>
+              </div>
+              <div class="card" style="margin-bottom:0">
+                <div class="sec">Weekly Key Levels</div>
+                <div class="g2" style="margin-bottom:8px">
+                  <div class="fg" style="margin-bottom:0"><label>Weekly Resistance</label><input id="ow-r1" type="text" placeholder="e.g. 5,350"></div>
+                  <div class="fg" style="margin-bottom:0"><label>Weekly Support</label><input id="ow-s1" type="text" placeholder="e.g. 5,150"></div>
+                </div>
+                <div class="fg" style="margin-bottom:8px"><label>Weekly Range (High/Low)</label><input id="ow-range" type="text" placeholder="e.g. 5,150 – 5,350"></div>
+                <div class="fg" style="margin-bottom:0"><label>Weekly POC / Value Area</label><input id="ow-poc" type="text" placeholder="e.g. 5,240 – 5,270"></div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:14px">
+              <div class="sec">Weekly Catalysts</div>
+              <div class="g2" style="margin-bottom:10px">
+                <div class="fg" style="margin-bottom:0"><label>High-Impact Event</label><input id="ow-event1" type="text" placeholder="e.g. Fed Chair speech Tue"></div>
+                <div class="fg" style="margin-bottom:0"><label>High-Impact Event 2</label><input id="ow-event2" type="text" placeholder="e.g. Jobs Report Fri 8:30"></div>
+              </div>
+              <div class="fg" style="margin-bottom:0">
+                <label>Earnings This Week</label>
+                <input id="ow-earnings" type="text" placeholder="e.g. NVDA Mon after close, TSLA Wed after close">
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:14px">
+              <div class="sec">Weekly Analysis</div>
+              <div class="fg" style="margin-bottom:10px">
+                <label>Market Context & Macro View</label>
+                <textarea id="ow-macro" rows="4" placeholder="What is the macro backdrop? Where are we in the trend? What is the broader narrative?"></textarea>
+              </div>
+              <div class="fg" style="margin-bottom:10px">
+                <label>Weekly Game Plan</label>
+                <textarea id="ow-plan" rows="4" placeholder="Which days are best to trade? What setups fit the weekly structure? Any days to sit out?"></textarea>
+              </div>
+              <div class="fg" style="margin-bottom:0">
+                <label>Weekly Targets</label>
+                <div class="g3" style="margin-top:6px">
+                  <div class="fg" style="margin-bottom:0"><label style="font-size:10px">P&L Target ($)</label><input id="ow-target-pnl" type="number" placeholder="e.g. 1500"></div>
+                  <div class="fg" style="margin-bottom:0"><label style="font-size:10px">Max Loss Limit ($)</label><input id="ow-max-loss" type="number" placeholder="e.g. 500"></div>
+                  <div class="fg" style="margin-bottom:0"><label style="font-size:10px">Trade Count Goal</label><input id="ow-trade-count" type="number" placeholder="e.g. 15"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="sec">Weekly Review <span style="font-weight:400;color:var(--text3);font-size:11px">(fill in Friday close)</span></div>
+              <div class="g2" style="margin-bottom:10px">
+                <div class="fg" style="margin-bottom:0"><label>Outcome vs Plan</label>
+                  <select id="ow-outcome">
+                    <option value="">— Select —</option>
+                    <option>Exceeded target</option>
+                    <option>Met target</option>
+                    <option>Below target</option>
+                    <option>Hit loss limit</option>
+                  </select>
+                </div>
+                <div class="fg" style="margin-bottom:0"><label>Week Grade</label>
+                  <select id="ow-grade">
+                    <option value="">— Grade —</option>
+                    <option>A — Excellent execution</option>
+                    <option>B — Solid week</option>
+                    <option>C — Average</option>
+                    <option>D — Poor discipline</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fg" style="margin-bottom:0">
+                <label>Weekly Takeaways</label>
+                <textarea id="ow-review" rows="3" placeholder="Key patterns, mistakes, and adjustments for next week..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── MONTHLY ── -->
+          <div id="op-monthly" style="display:none">
+            <div class="g2" style="margin-bottom:14px">
+              <div class="card" style="margin-bottom:0">
+                <div class="sec">Monthly Bias</div>
+                <div style="display:flex;gap:8px;margin-bottom:12px">
+                  <div onclick="setOutlookBias('monthly','bullish',this)" id="ob-monthly-bullish"
+                    class="outlook-bias-btn" style="flex:1;text-align:center;padding:10px;border-radius:9px;cursor:pointer;transition:all .18s;border:1.5px solid var(--bdr2);background:var(--bg3);font-size:12px;font-weight:600">
+                    🟢 Bullish
+                  </div>
+                  <div onclick="setOutlookBias('monthly','neutral',this)" id="ob-monthly-neutral"
+                    class="outlook-bias-btn" style="flex:1;text-align:center;padding:10px;border-radius:9px;cursor:pointer;transition:all .18s;border:1.5px solid var(--bdr2);background:var(--bg3);font-size:12px;font-weight:600">
+                    ⚪ Neutral
+                  </div>
+                  <div onclick="setOutlookBias('monthly','bearish',this)" id="ob-monthly-bearish"
+                    class="outlook-bias-btn" style="flex:1;text-align:center;padding:10px;border-radius:9px;cursor:pointer;transition:all .18s;border:1.5px solid var(--bdr2);background:var(--bg3);font-size:12px;font-weight:600">
+                    🔴 Bearish
+                  </div>
+                </div>
+                <div class="fg" style="margin-bottom:0">
+                  <label>Conviction Level</label>
+                  <div style="display:flex;gap:5px;margin-top:6px" id="ob-monthly-conv"></div>
+                </div>
+              </div>
+              <div class="card" style="margin-bottom:0">
+                <div class="sec">Monthly Key Levels</div>
+                <div class="g2" style="margin-bottom:8px">
+                  <div class="fg" style="margin-bottom:0"><label>Monthly Resistance</label><input id="om-r1" type="text" placeholder="e.g. 5,500"></div>
+                  <div class="fg" style="margin-bottom:0"><label>Monthly Support</label><input id="om-s1" type="text" placeholder="e.g. 4,800"></div>
+                </div>
+                <div class="fg" style="margin-bottom:8px"><label>All-Time High / Key Range</label><input id="om-ath" type="text" placeholder="e.g. ATH 5,480 / Range 4,800–5,480"></div>
+                <div class="fg" style="margin-bottom:0"><label>Monthly POC / Volume Node</label><input id="om-poc" type="text" placeholder="e.g. 5,100 high-volume node"></div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:14px">
+              <div class="sec">Monthly Macro & Sector Themes</div>
+              <div class="g2" style="margin-bottom:10px">
+                <div class="fg" style="margin-bottom:0"><label>Fed / Interest Rate Outlook</label><input id="om-fed" type="text" placeholder="e.g. Rate cut expected Q3, hawkish tone"></div>
+                <div class="fg" style="margin-bottom:0"><label>Earnings Season Phase</label><input id="om-earnings" type="text" placeholder="e.g. Big Tech week 2 of 4"></div>
+              </div>
+              <div class="g2" style="margin-bottom:10px">
+                <div class="fg" style="margin-bottom:0"><label>Leading Sector</label><input id="om-sector-lead" type="text" placeholder="e.g. Tech, Energy, Financials"></div>
+                <div class="fg" style="margin-bottom:0"><label>Lagging / Avoiding</label><input id="om-sector-lag" type="text" placeholder="e.g. Real Estate, Utilities"></div>
+              </div>
+              <div class="fg" style="margin-bottom:0">
+                <label>Biggest Macro Risk This Month</label>
+                <input id="om-risk" type="text" placeholder="e.g. Inflation data surprise, geopolitical escalation">
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:14px">
+              <div class="sec">Monthly Analysis & Strategy</div>
+              <div class="fg" style="margin-bottom:10px">
+                <label>Monthly Thesis</label>
+                <textarea id="om-thesis" rows="5" placeholder="What is your primary narrative for this month? Where do you expect price to go and why? What conditions would invalidate this thesis?"></textarea>
+              </div>
+              <div class="fg" style="margin-bottom:10px">
+                <label>Best Setups to Focus On This Month</label>
+                <textarea id="om-setups" rows="3" placeholder="e.g. Breakouts on high-volume days, VWAP reclaims in first hour, avoid counter-trend fades..."></textarea>
+              </div>
+              <div class="fg" style="margin-bottom:0">
+                <label>Monthly Targets & Limits</label>
+                <div class="g3" style="margin-top:6px">
+                  <div class="fg" style="margin-bottom:0"><label style="font-size:10px">Monthly P&L Target ($)</label><input id="om-target-pnl" type="number" placeholder="e.g. 6000"></div>
+                  <div class="fg" style="margin-bottom:0"><label style="font-size:10px">Max Monthly Drawdown ($)</label><input id="om-max-dd" type="number" placeholder="e.g. 2000"></div>
+                  <div class="fg" style="margin-bottom:0"><label style="font-size:10px">Win Rate Goal (%)</label><input id="om-wr-goal" type="number" placeholder="e.g. 60"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="sec">Monthly Review <span style="font-weight:400;color:var(--text3);font-size:11px">(fill in at month end)</span></div>
+              <div class="g2" style="margin-bottom:10px">
+                <div class="fg" style="margin-bottom:0"><label>Thesis Accuracy</label>
+                  <select id="om-thesis-result">
+                    <option value="">— Select —</option>
+                    <option>Spot on — played out as expected</option>
+                    <option>Partially correct</option>
+                    <option>Wrong direction</option>
+                    <option>Thesis invalidated mid-month</option>
+                  </select>
+                </div>
+                <div class="fg" style="margin-bottom:0"><label>Month Grade</label>
+                  <select id="om-grade">
+                    <option value="">— Grade —</option>
+                    <option>A — Best month in a while</option>
+                    <option>B — Solid performance</option>
+                    <option>C — Breakeven / below plan</option>
+                    <option>D — Significant losses</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fg" style="margin-bottom:0">
+                <label>Monthly Review Notes</label>
+                <textarea id="om-review" rows="4" placeholder="What were the biggest wins, biggest mistakes, and what are you carrying into next month?"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Last saved indicator -->
+          <div style="text-align:right;font-size:11px;color:var(--text3);margin-top:10px" id="outlook-saved-at"></div>
+
         </div>
       </div>
 
@@ -1953,14 +2311,59 @@ tr:hover td{background:rgba(255,255,255,.015)}
         </div>
       </div>
 
-      <!-- ═══ ALERTS ═══ -->
+      <!-- ═══ ALERTS & REMINDERS ═══ -->
       <div class="page" id="pg-alerts">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-          <div style="font-size:12px;color:var(--text2)" id="al-summary"></div>
-          <button class="btn btn-c btn-sm" onclick="openAlModal()">+ New Alert</button>
+
+        <!-- Page header -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-family:var(--head);font-size:20px;font-weight:800">⚡ Alerts &amp; Reminders</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px" id="al-summary">Loading...</div>
+          </div>
+          <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-g btn-sm" onclick="requestBrowserNotifPermission()" id="notif-perm-btn" style="display:none">📲 Enable Browser Alerts</button>
+          </div>
         </div>
-        <div class="tab-row"><div class="tab active" onclick="alTab('active',this)">Active</div><div class="tab" onclick="alTab('triggered',this)">Triggered</div><div class="tab" onclick="alTab('all',this)">All</div></div>
-        <div id="al-list"></div>
+
+        <!-- Browser permission notice -->
+        <div id="notif-perm-notice" style="display:none;background:rgba(255,193,7,.07);border:1px solid rgba(255,193,7,.25);border-radius:9px;padding:11px 14px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+          📲 <strong style="color:var(--gold)">Enable browser notifications</strong> to receive alerts even when the app is minimised. Click above, then Allow when prompted.
+        </div>
+
+        <!-- ── SECTION 1: Trading Alerts ─────────────────────────── -->
+        <div class="card" style="margin-bottom:16px;border-color:rgba(255,71,87,.2)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div>
+              <div style="font-size:14px;font-weight:700;color:var(--text)">⚡ Trading Alerts</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">Fire automatically when trading conditions are met — P&amp;L, win rate, loss streaks &amp; more</div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm" style="background:transparent;border:1px solid rgba(255,71,87,.25);color:var(--text3);font-size:11px" onclick="clearAllAlerts()" title="Delete all trading alerts">🗑 Clear All</button>
+              <button class="btn btn-sm" style="background:rgba(255,71,87,.12);border:1px solid rgba(255,71,87,.3);color:var(--red)" onclick="openTradingAlertModal()">+ New Alert</button>
+            </div>
+          </div>
+          <div id="trading-alert-list">
+            <div style="text-align:center;color:var(--text3);padding:24px;font-size:12px">No trading alerts yet. Click <strong>+ New Alert</strong> to create one.</div>
+          </div>
+        </div>
+
+        <!-- ── SECTION 2: Reminders ───────────────────────────────── -->
+        <div class="card" style="border-color:rgba(0,212,255,.2)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div>
+              <div style="font-size:14px;font-weight:700;color:var(--text)">🔔 Reminders</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">Time-based nudges — checklist, journaling, market outlook, and custom reminders</div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm" style="background:transparent;border:1px solid rgba(0,212,255,.2);color:var(--text3);font-size:11px" onclick="clearAllReminders()" title="Delete all reminders">🗑 Clear All</button>
+              <button class="btn btn-c btn-sm" onclick="openAlModal()">+ New Reminder</button>
+            </div>
+          </div>
+          <div id="reminder-list">
+            <div style="text-align:center;color:var(--text3);padding:24px;font-size:12px">No reminders yet. Click <strong>+ New Reminder</strong> to create one.</div>
+          </div>
+        </div>
+
       </div>
 
       <!-- ═══ TAG MANAGER ═══ -->
@@ -2344,6 +2747,64 @@ tr:hover td{background:rgba(255,255,255,.015)}
                   🖥️ <strong>Desktop:</strong> Click the install icon (⊕) in your browser's address bar<br>
                   🍎 <strong>iPhone/iPad:</strong> Safari → Share (⬆) → "Add to Home Screen"
                 </div>
+              </div>
+            </div>
+
+            <!-- ☁️ Firebase Cloud Sync card -->
+            <div class="card" id="firebase-sync-card" style="grid-column:1/-1;border-color:rgba(0,212,255,.2);background:linear-gradient(135deg,rgba(0,212,255,.04),rgba(179,136,255,.03))">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                <span style="font-size:22px">☁️</span>
+                <div style="flex:1">
+                  <div class="sec" style="margin-bottom:2px">Cloud Sync — Firebase</div>
+                  <div style="font-size:11px;color:var(--text2)">Sync your journal across all devices in real time using your own free Firebase project.</div>
+                </div>
+                <div id="fb-status-badge" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.4px;background:var(--bg3);color:var(--text3);border:1px solid var(--bdr2)">NOT SET UP</div>
+              </div>
+
+              <!-- Not-configured state -->
+              <div id="fb-setup-section">
+                <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.8">
+                  <strong style="color:var(--text)">How to set up (5 minutes, free):</strong><br>
+                  1. Go to <strong>console.firebase.google.com</strong> and create a project (any name)<br>
+                  2. Click <strong>Firestore Database → Create database</strong> → choose <em>Start in test mode</em><br>
+                  3. Click the gear ⚙ → <strong>Project settings → General → Your apps → Web app</strong> (add one if needed)<br>
+                  4. Copy the <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">firebaseConfig</code> values and paste them below
+                </div>
+                <div class="g2" style="margin-bottom:10px">
+                  <div class="fg"><label>API Key</label><input id="fb-api-key" type="text" placeholder="AIzaSy..."></div>
+                  <div class="fg"><label>Project ID</label><input id="fb-project-id" type="text" placeholder="my-tradeedge-12345"></div>
+                </div>
+                <div class="g2" style="margin-bottom:10px">
+                  <div class="fg"><label>Auth Domain</label><input id="fb-auth-domain" type="text" placeholder="my-project.firebaseapp.com"></div>
+                  <div class="fg"><label>App ID</label><input id="fb-app-id" type="text" placeholder="1:123456:web:abc..."></div>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <button class="btn btn-c" style="flex:1;justify-content:center" onclick="fbSaveConfig()">☁️ Connect Firebase</button>
+                  <button class="btn btn-g btn-sm" onclick="fbShowExistingConfig()" id="fb-has-config-btn" style="display:none">Use Saved Config</button>
+                </div>
+              </div>
+
+              <!-- Connected state (hidden until setup) -->
+              <div id="fb-connected-section" style="display:none">
+                <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+                  <button class="btn btn-c" style="flex:1;justify-content:center;min-width:140px" onclick="fbPush()">
+                    <span style="font-size:14px">☁️</span> Push to Cloud
+                  </button>
+                  <button class="btn btn-g" style="flex:1;justify-content:center;min-width:140px" onclick="fbPull()">
+                    <span style="font-size:14px">⬇️</span> Pull from Cloud
+                  </button>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+                  <label class="tgl-wrap" style="align-self:center"><input type="checkbox" id="fb-auto-sync" onchange="fbToggleAutoSync(this.checked)"><span class="tgl-track"></span></label>
+                  <div>
+                    <div style="font-size:13px;font-weight:500">Auto-sync on every save</div>
+                    <div style="font-size:11px;color:var(--text2)">Pushes to Firebase whenever you log or edit a trade</div>
+                  </div>
+                </div>
+                <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);line-height:1.7;margin-bottom:10px" id="fb-last-sync-info">
+                  Last sync: never
+                </div>
+                <button class="btn btn-g btn-sm" style="color:var(--red);border-color:rgba(255,71,87,.3)" onclick="fbDisconnect()">✕ Disconnect Firebase</button>
               </div>
             </div>
 
@@ -3405,15 +3866,182 @@ tr:hover td{background:rgba(255,255,255,.015)}
   </div>
 
   <!-- Alert Modal -->
-<div class="modal-bg" id="al-modal">
-  <div class="modal">
+  <!-- Trading Alert Modal -->
+<div class="modal-bg" id="trading-alert-modal">
+  <div class="modal" style="max-width:440px">
     <div class="modal-handle"></div>
-    <div class="modal-title">Create Alert<button class="modal-close" onclick="closeModal('al-modal')">×</button></div>
-    <div class="fg"><label>Alert Type</label><select id="am-type" onchange="updateAlModal()"><option value="daily-pnl">Daily P&L Threshold</option><option value="win-rate">Win Rate Drop</option><option value="consec-loss">Consecutive Losses</option><option value="tag-count">Tag Usage Count</option><option value="emotion-neg">Negative Emotions (3+)</option><option value="emotion-pos">Positive Emotions (4+)</option></select></div>
+    <div class="modal-title">
+      <span>⚡ Create Trading Alert</span>
+      <button class="modal-close" onclick="closeModal('trading-alert-modal')">×</button>
+    </div>
+    <div style="background:rgba(255,71,87,.06);border:1px solid rgba(255,71,87,.18);border-radius:9px;padding:10px 13px;margin-bottom:14px;font-size:12px;color:var(--text2);line-height:1.6">
+      ⚡ Trading alerts fire automatically when a condition is met — like hitting a P&amp;L limit or dropping below a win rate. They are checked against your actual trade data.
+    </div>
+    <div class="fg">
+      <label>Alert Type</label>
+      <select id="am-type" onchange="updateAlModal()">
+        <option value="daily-pnl">Daily P&amp;L Threshold</option>
+        <option value="win-rate">Win Rate Drop</option>
+        <option value="consec-loss">Consecutive Losses</option>
+        <option value="tag-count">Tag Usage Count</option>
+        <option value="emotion-neg">Negative Emotions (3+)</option>
+        <option value="emotion-pos">Positive Emotions (4+)</option>
+      </select>
+    </div>
     <div id="am-fields"></div>
     <div class="fg"><label>Alert Name</label><input id="am-name" type="text"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--bdr);margin-bottom:12px"><span style="font-size:12px;color:var(--text2)">Email notification</span><label class="tgl-wrap"><input type="checkbox" id="am-email"><span class="tgl-track"></span></label></div>
-    <div style="display:flex;gap:8px"><button class="btn btn-c" style="flex:1;justify-content:center" onclick="saveAlert()">Create Alert</button><button class="btn btn-g" onclick="closeModal('al-modal')">Cancel</button></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--bdr);margin-bottom:12px">
+      <span style="font-size:12px;color:var(--text2)">Email notification</span>
+      <label class="tgl-wrap"><input type="checkbox" id="am-email"><span class="tgl-track"></span></label>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="flex:1;justify-content:center;background:rgba(255,71,87,.12);border:1px solid rgba(255,71,87,.3);color:var(--red)" onclick="saveAlert()">Create Alert</button>
+      <button class="btn btn-g" onclick="closeModal('trading-alert-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+  <!-- Reminder Modal -->
+<div class="modal-bg" id="al-modal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <span id="al-modal-title">🔔 New Reminder</span>
+      <button class="modal-close" onclick="closeModal('al-modal')">×</button>
+    </div>
+
+    <!-- Reminder type dropdown -->
+    <div class="fg" style="margin-bottom:12px">
+      <label>Reminder Type</label>
+      <select id="rm-type-select" onchange="selectRmType(this.value)">
+        <option value="checklist">✅  Checklist</option>
+        <option value="journal">📋  Journal Trades</option>
+        <option value="analysis">📊  Review Analysis</option>
+        <option value="outlook">🔭  Market Outlook</option>
+        <option value="premarket">🌅  Pre-Market Prep</option>
+        <option value="risk">🛡️  Risk Check</option>
+        <option value="eod">🌙  End-of-Day Review</option>
+        <option value="custom">✏️  Custom</option>
+      </select>
+    </div>
+
+    <!-- Reminder name -->
+    <div class="fg" style="margin-bottom:12px">
+      <label>Reminder Name</label>
+      <input id="rm-name" type="text" placeholder="e.g. Morning checklist at open">
+    </div>
+
+    <!-- Message -->
+    <div class="fg" style="margin-bottom:12px">
+      <label>Message <span style="font-size:10px;color:var(--text3)">(shown in the alert)</span></label>
+      <textarea id="rm-message" rows="2" placeholder="e.g. Time to run your pre-session checklist before the open!"></textarea>
+    </div>
+
+    <!-- Schedule section -->
+    <div style="background:var(--bg3);border-radius:10px;padding:13px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:10px">⏰ Schedule</div>
+
+      <div class="fg" style="margin-bottom:10px">
+        <label>Trigger</label>
+        <select id="rm-trigger" onchange="updateRmTrigger()">
+          <option value="time">Specific time each day</option>
+          <option value="market-open">Market open (9:30 AM ET)</option>
+          <option value="market-close">Market close (4:00 PM ET)</option>
+          <option value="premarket">Pre-market (8:00 AM ET)</option>
+          <option value="interval">Repeating interval</option>
+          <option value="manual">Manual only (no auto-fire)</option>
+        </select>
+      </div>
+
+      <!-- Time picker (shown for 'time' trigger) -->
+      <div id="rm-time-wrap" style="margin-bottom:8px">
+        <div class="fg" style="margin-bottom:0">
+          <label>Time</label>
+          <input id="rm-time" type="time" value="09:00">
+        </div>
+      </div>
+
+      <!-- Interval picker (shown for 'interval') -->
+      <div id="rm-interval-wrap" style="display:none;margin-bottom:8px">
+        <div class="g2">
+          <div class="fg" style="margin-bottom:0"><label>Every</label><input id="rm-interval-val" type="number" value="2" min="1"></div>
+          <div class="fg" style="margin-bottom:0"><label>Unit</label>
+            <select id="rm-interval-unit">
+              <option value="minutes">Minutes</option>
+              <option value="hours" selected>Hours</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Days of week — dial selector -->
+      <div class="fg" style="margin-bottom:0">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="margin-bottom:0">Active Days</label>
+          <div style="display:flex;gap:4px">
+            <button type="button" onclick="setAllDays(true)"  style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--bdr2);background:var(--bg4);color:var(--text2);cursor:pointer">All</button>
+            <button type="button" onclick="setAllDays(false)" style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--bdr2);background:var(--bg4);color:var(--text2);cursor:pointer">None</button>
+            <button type="button" onclick="setWeekdays()"     style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--bdr2);background:var(--bg4);color:var(--text2);cursor:pointer">Weekdays</button>
+          </div>
+        </div>
+        <!-- Dial-style day selector -->
+        <div id="rm-days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+          <div onclick="toggleRmDay(this,'mon')" class="rm-day-btn active" data-day="mon">
+            <div class="rm-day-letter">M</div>
+            <div class="rm-day-label">Mon</div>
+          </div>
+          <div onclick="toggleRmDay(this,'tue')" class="rm-day-btn active" data-day="tue">
+            <div class="rm-day-letter">T</div>
+            <div class="rm-day-label">Tue</div>
+          </div>
+          <div onclick="toggleRmDay(this,'wed')" class="rm-day-btn active" data-day="wed">
+            <div class="rm-day-letter">W</div>
+            <div class="rm-day-label">Wed</div>
+          </div>
+          <div onclick="toggleRmDay(this,'thu')" class="rm-day-btn active" data-day="thu">
+            <div class="rm-day-letter">T</div>
+            <div class="rm-day-label">Thu</div>
+          </div>
+          <div onclick="toggleRmDay(this,'fri')" class="rm-day-btn active" data-day="fri">
+            <div class="rm-day-letter">F</div>
+            <div class="rm-day-label">Fri</div>
+          </div>
+          <div onclick="toggleRmDay(this,'sat')" class="rm-day-btn" data-day="sat">
+            <div class="rm-day-letter">S</div>
+            <div class="rm-day-label">Sat</div>
+          </div>
+          <div onclick="toggleRmDay(this,'sun')" class="rm-day-btn" data-day="sun">
+            <div class="rm-day-letter">S</div>
+            <div class="rm-day-label">Sun</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification options -->
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+      <div class="pref-row" style="padding:8px 0">
+        <div><div style="font-size:13px;font-weight:500">🔔 In-App Alert</div><div style="font-size:11px;color:var(--text2)">Popup banner inside TradeEdge Pro</div></div>
+        <label class="tgl-wrap"><input type="checkbox" id="rm-inapp" checked><span class="tgl-track"></span></label>
+      </div>
+      <div class="pref-row" style="padding:8px 0">
+        <div><div style="font-size:13px;font-weight:500">🔊 Sound Alert</div><div style="font-size:11px;color:var(--text2)">Play a chime when reminder fires</div></div>
+        <label class="tgl-wrap"><input type="checkbox" id="rm-sound" checked><span class="tgl-track"></span></label>
+      </div>
+      <div class="pref-row" style="padding:8px 0">
+        <div><div style="font-size:13px;font-weight:500">📲 Browser Notification</div><div style="font-size:11px;color:var(--text2)">System notification (works when app is minimised)</div></div>
+        <label class="tgl-wrap"><input type="checkbox" id="rm-browser"><span class="tgl-track"></span></label>
+      </div>
+      <div class="pref-row" style="padding:8px 0">
+        <div><div style="font-size:13px;font-weight:500">📧 Email Reminder</div><div style="font-size:11px;color:var(--text2)">Requires email set in Settings → Account</div></div>
+        <label class="tgl-wrap"><input type="checkbox" id="rm-email"><span class="tgl-track"></span></label>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-c" style="flex:1;justify-content:center" onclick="saveReminder()">Save Reminder</button>
+      <button class="btn btn-g" onclick="closeModal('al-modal')">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -3653,6 +4281,33 @@ let tagLibrary=[
 
 const dayAlerts={};
 
+// ─── Market Outlook ───────────────────────────────────────────
+let marketOutlook = {
+  daily: {
+    bias:'', conviction:0,
+    r1:'', r2:'', s1:'', s2:'', poc:'',
+    event1:'', event2:'', event3:'', impact:'',
+    premarket:'', plan:'', avoid:'',
+    biasResult:'', grade:'', lessons:''
+  },
+  weekly: {
+    bias:'', conviction:0,
+    r1:'', s1:'', range:'', poc:'',
+    event1:'', event2:'', earnings:'',
+    macro:'', plan:'',
+    targetPnl:'', maxLoss:'', tradeCount:'',
+    outcome:'', grade:'', review:''
+  },
+  monthly: {
+    bias:'', conviction:0,
+    r1:'', s1:'', ath:'', poc:'',
+    fed:'', earnings:'', sectorLead:'', sectorLag:'', risk:'',
+    thesis:'', setups:'',
+    targetPnl:'', maxDd:'', wrGoal:'',
+    thesisResult:'', grade:'', review:''
+  }
+};
+
 // ═══════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════
@@ -3759,7 +4414,7 @@ function nav(page){
   if(PAGE_BADGES[page]){badge.textContent=PAGE_BADGES[page];badge.style.display='inline-block';}else badge.style.display='none';
   const tr=document.getElementById('tb-right');
   tr.innerHTML=page==='trades'?'<button class="btn btn-c btn-sm" onclick="nav(\'log\')">+ Trade</button>':page==='alerts'?'<button class="btn btn-c btn-sm" onclick="openAlModal()">+ Alert</button>':page==='tags'?'<button class="btn btn-c btn-sm" onclick="openAddTagModal()">+ Tag</button>':'<button class="btn btn-c btn-sm" onclick="nav(\'log\')">+ Trade</button>';
-  const initMap={home:initHome,dashboard:initDashboard,calendar:renderCal,analytics:initAnalytics,trades:renderTrades,log:initLog,checklist:renderChecklist,alerts:renderAlerts,tags:renderTagManager,settings:initSettings,plan:initTradingPlan,missed:initMissedTrades};
+  const initMap={home:initHome,dashboard:initDashboard,calendar:renderCal,analytics:initAnalytics,trades:renderTrades,log:initLog,checklist:renderChecklist,alerts:renderAlerts,tags:renderTagManager,settings:initSettings,plan:initTradingPlan,missed:initMissedTrades,outlook:initOutlook};
   if(initMap[page])initMap[page]();
   updateAlDot();
   document.getElementById('content-area').scrollTop=0;
@@ -3789,6 +4444,7 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 // HOME
 // ═══════════════════════════════════════
 function initHome(){
+  renderHomeBiasSummary();
   tickClock();if(!window._ci)window._ci=setInterval(tickClock,1000);
   document.getElementById('aff-txt').textContent=AFFS[affIdx];
   document.getElementById('hmood').innerHTML=[...POS_EMO,...NEG_EMO].map(e=>`<div class="mood-pill ${selMoods.has(e)?POS_EMO.includes(e)?'ps':'ns':''}" onclick="togMood('${e}',this)">${e}</div>`).join('');
@@ -5387,25 +6043,191 @@ function chkDrop(e, type, toIdx) {
 // ALERTS
 // ═══════════════════════════════════════
 function updateAlDot(){const c=alertRules.filter(a=>a.triggered&&a.active).length;document.getElementById('al-dot').classList.toggle('on',c>0);document.getElementById('bn-dot').classList.toggle('on',c>0);const db=document.getElementById('drawer-badge');if(db)db.style.display=c>0?'inline':'none';}
-function renderAlerts(){
-  const filtered=alertRules.filter(a=>{if(alTabCur==='active')return a.active&&!a.triggered;if(alTabCur==='triggered')return a.triggered;return true;});
-  document.getElementById('al-summary').textContent=`${alertRules.filter(a=>a.active).length} active · ${alertRules.filter(a=>a.triggered).length} triggered`;
-  const ico={'daily-pnl':'💰','win-rate':'📊','consec-loss':'📉','tag-count':'🏷️','emotion-neg':'😰','emotion-pos':'🎉'};
-  const icBg={'daily-pnl':'rgba(255,71,87,.12)','win-rate':'rgba(255,193,7,.12)','consec-loss':'rgba(255,71,87,.12)','tag-count':'rgba(255,193,7,.12)','emotion-neg':'rgba(255,193,7,.12)','emotion-pos':'rgba(0,230,118,.12)'};
-  document.getElementById('al-list').innerHTML=filtered.length?filtered.map(a=>`<div class="al-item"><div class="al-ico" style="background:${icBg[a.type]||'rgba(0,212,255,.12)'}">${ico[a.type]||'🔔'}</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;margin-bottom:2px">${a.name}</div><div style="font-size:11px;color:var(--text2)">${a.desc}</div>${a.at?`<div style="font-size:10px;color:var(--gold);margin-top:2px">⚡ Triggered ${a.at}</div>`:''}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0"><span class="al-badge ${a.triggered?'ab-t':a.active?'ab-a':'ab-o'}">${a.triggered?'Triggered':a.active?'Active':'Off'}</span><div style="display:flex;gap:5px;align-items:center"><label class="tgl-wrap"><input type="checkbox" ${a.active?'checked':''} onchange="togAlert(${a.id})"><span class="tgl-track"></span></label><button class="btn btn-g btn-xs" onclick="rmAlert(${a.id})">✕</button></div></div></div>`).join(''):`<div style="text-align:center;color:var(--text3);padding:40px;font-size:12px">No alerts in this view</div>`;
+
+// ── Alert type metadata ───────────────────────────────────
+const ALERT_ICO   = {'daily-pnl':'💰','win-rate':'📊','consec-loss':'📉','tag-count':'🏷️','emotion-neg':'😰','emotion-pos':'🎉'};
+const ALERT_IC_BG = {'daily-pnl':'rgba(255,71,87,.15)','win-rate':'rgba(255,193,7,.15)','consec-loss':'rgba(255,71,87,.15)','tag-count':'rgba(255,193,7,.15)','emotion-neg':'rgba(255,193,7,.15)','emotion-pos':'rgba(0,230,118,.15)'};
+const ALERT_TYPES = new Set(['daily-pnl','win-rate','consec-loss','tag-count','emotion-neg','emotion-pos']);
+
+// ── Open trading alert modal ──────────────────────────────
+function openTradingAlertModal() {
+  updateAlModal();
+  document.getElementById('trading-alert-modal').classList.add('open');
 }
-function alTab(tab,el){alTabCur=tab;document.querySelectorAll('#pg-alerts .tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');renderAlerts();}
-function togAlert(id){const a=alertRules.find(x=>x.id===id);if(a)a.active=!a.active;renderAlerts();updateAlDot();}
-function rmAlert(id){alertRules=alertRules.filter(a=>a.id!==id);renderAlerts();updateAlDot();}
-function openAlModal(){updateAlModal();document.getElementById('al-modal').classList.add('open');}
+
+// ── updateAlModal — populates am-fields based on am-type ─
 function updateAlModal(){
   const type=document.getElementById('am-type').value;
-  const fields={'daily-pnl':'<div class="fg"><label>P&L Threshold ($)</label><input id="am-thresh" type="number" value="-500"></div>','win-rate':'<div class="fg"><label>Win Rate Threshold (%)</label><input id="am-thresh" type="number" value="40"></div><div class="fg"><label>Over last N trades</label><input id="am-period" type="number" value="20"></div>','consec-loss':'<div class="fg"><label>Max Consecutive Losses</label><input id="am-thresh" type="number" value="3"></div>','tag-count':'<div class="fg"><label>Tag Name</label><input id="am-tag" type="text" value="revenge-trade"></div><div class="fg"><label>Max uses/day</label><input id="am-thresh" type="number" value="2"></div>','emotion-neg':'<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:12px;color:var(--text2);margin-bottom:10px">Fires when 3+ negative emotions noted.</div>','emotion-pos':'<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:12px;color:var(--text2);margin-bottom:10px">Fires when 4+ positive emotions noted.</div>'};
-  document.getElementById('am-fields').innerHTML=fields[type]||'';
+  const fields={
+    'daily-pnl':   '<div class="fg"><label>P&L Threshold ($) — fires when daily P&L drops below this</label><input id="am-thresh" type="number" value="-500"></div>',
+    'win-rate':    '<div class="fg"><label>Win Rate Threshold (%)</label><input id="am-thresh" type="number" value="40"></div><div class="fg"><label>Over last N trades</label><input id="am-period" type="number" value="20"></div>',
+    'consec-loss': '<div class="fg"><label>Max Consecutive Losses before alert</label><input id="am-thresh" type="number" value="3"></div>',
+    'tag-count':   '<div class="fg"><label>Tag Name</label><input id="am-tag" type="text" value="revenge-trade"></div><div class="fg"><label>Max uses per day</label><input id="am-thresh" type="number" value="2"></div>',
+    'emotion-neg': '<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:12px;color:var(--text2);margin-bottom:10px">⚠️ Fires when you select 3 or more negative emotions on the Home screen.</div>',
+    'emotion-pos': '<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:12px;color:var(--text2);margin-bottom:10px">🎉 Fires when you select 4 or more positive emotions on the Home screen.</div>',
+  };
+  const el = document.getElementById('am-fields');
+  if(el) el.innerHTML = fields[type]||'';
   const nm={'daily-pnl':'Daily Loss Limit','win-rate':'Win Rate Warning','consec-loss':'Consecutive Loss Alert','tag-count':'Tag Usage Alert','emotion-neg':'Emotional Check-in','emotion-pos':'Positive Reinforcement'};
-  document.getElementById('am-name').value=nm[type]||'';
+  const nameEl = document.getElementById('am-name');
+  if(nameEl) nameEl.value = nm[type]||'';
 }
-function saveAlert(){const type=document.getElementById('am-type').value,name=document.getElementById('am-name').value||'New Alert',email=document.getElementById('am-email').checked,th=document.getElementById('am-thresh'),tag=document.getElementById('am-tag');alertRules.push({id:Date.now(),type,name,threshold:th?parseFloat(th.value):null,tag:tag?tag.value:'',active:true,triggered:false,email,desc:name});closeModal('al-modal');renderAlerts();updateAlDot();showNotif('Alert created',name,'success');}
+
+// ── Save trading alert ────────────────────────────────────
+function saveAlert(){
+  const type  = document.getElementById('am-type').value;
+  const name  = document.getElementById('am-name').value || 'New Alert';
+  const email = document.getElementById('am-email')?.checked || false;
+  const th    = document.getElementById('am-thresh');
+  const tag   = document.getElementById('am-tag');
+  const desc  = {
+    'daily-pnl':   'Fires when daily P&L drops below ' + (th ? '$'+th.value : ''),
+    'win-rate':    'Fires when win rate drops below ' + (th ? th.value+'%' : ''),
+    'consec-loss': 'Fires after ' + (th ? th.value : '3') + ' consecutive losses',
+    'tag-count':   'Fires when tag "' + (tag ? tag.value : '') + '" used excessively',
+    'emotion-neg': 'Fires on 3+ negative emotions',
+    'emotion-pos': 'Fires on 4+ positive emotions',
+  }[type] || name;
+  alertRules.push({
+    id: Date.now(), kind:'alert', type, name,
+    threshold: th ? parseFloat(th.value) : null,
+    tag: tag ? tag.value : '',
+    active:true, triggered:false, email, desc,
+  });
+  closeModal('trading-alert-modal');
+  renderAlerts(); updateAlDot();
+  saveCurrentUserData();
+  showNotif('Alert created ⚡', name, 'success');
+}
+
+// ── Main render — splits into two sections ────────────────
+function renderAlerts() {
+  const tradingAlerts = alertRules.filter(a => ALERT_TYPES.has(a.type) || a.kind === 'alert');
+  const reminders     = alertRules.filter(a => !ALERT_TYPES.has(a.type) && a.kind !== 'alert');
+
+  // Summary line
+  const activeCount   = alertRules.filter(a => a.active && !a.triggered).length;
+  const triggeredCount= alertRules.filter(a => a.triggered).length;
+  const sumEl = document.getElementById('al-summary');
+  if(sumEl) sumEl.textContent = `${alertRules.length} total · ${activeCount} active · ${triggeredCount} triggered`;
+
+  // Browser permission notice
+  const noticeEl = document.getElementById('notif-perm-notice');
+  const permBtn  = document.getElementById('notif-perm-btn');
+  const needsPerm = reminders.some(r => r.browser) && Notification.permission !== 'granted';
+  if(noticeEl) noticeEl.style.display = needsPerm ? 'block' : 'none';
+  if(permBtn)  permBtn.style.display  = needsPerm && Notification.permission !== 'denied' ? 'inline-flex' : 'none';
+
+  // ── Render trading alerts ──────────────────────────────
+  const taEl = document.getElementById('trading-alert-list');
+  if(taEl) {
+    if(!tradingAlerts.length) {
+      taEl.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px;font-size:12px">No trading alerts yet. Click <strong>+ New Alert</strong> to create one.</div>';
+    } else {
+      taEl.innerHTML = tradingAlerts.map(a => {
+        const ico  = ALERT_ICO[a.type]  || '⚡';
+        const icBg = ALERT_IC_BG[a.type] || 'rgba(255,71,87,.12)';
+        return `<div class="al-item" style="border-left:3px solid ${a.triggered?'var(--gold)':a.active?'rgba(255,71,87,.5)':'var(--bdr)'}">
+          <div class="al-ico" style="background:${icBg};font-size:18px">${ico}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;margin-bottom:2px">${a.name}</div>
+            <div style="font-size:11px;color:var(--text2)">${a.desc||''}</div>
+            ${a.at?`<div style="font-size:10px;color:var(--gold);margin-top:3px">⚡ Triggered ${a.at}</div>`:''}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+            <span class="al-badge ${a.triggered?'ab-t':a.active?'ab-a':'ab-o'}">${a.triggered?'Fired':a.active?'Active':'Off'}</span>
+            <div style="display:flex;gap:5px;align-items:center">
+              <label class="tgl-wrap"><input type="checkbox" ${a.active?'checked':''} onchange="togAlert(${a.id})"><span class="tgl-track"></span></label>
+              <button class="ic-btn del" onclick="rmAlert(${a.id})" title="Delete">✕</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // ── Render reminders ───────────────────────────────────
+  const rmEl = document.getElementById('reminder-list');
+  if(rmEl) {
+    if(!reminders.length) {
+      rmEl.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px;font-size:12px">No reminders yet. Click <strong>+ New Reminder</strong> to create one.</div>';
+    } else {
+      rmEl.innerHTML = reminders.map(a => {
+        const meta  = RM_TYPES[a.type] || RM_TYPES.custom;
+        const badges = [
+          a.inApp  !== false ? '<span style="font-size:10px;background:rgba(0,212,255,.1);color:var(--cyan);border:1px solid rgba(0,212,255,.2);border-radius:4px;padding:1px 6px">In-App</span>' : '',
+          a.sound  !== false ? '<span style="font-size:10px;background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.2);border-radius:4px;padding:1px 6px">🔊 Sound</span>' : '',
+          a.browser           ? '<span style="font-size:10px;background:rgba(179,136,255,.1);color:var(--purple);border:1px solid rgba(179,136,255,.2);border-radius:4px;padding:1px 6px">📲 Browser</span>' : '',
+          a.email             ? '<span style="font-size:10px;background:rgba(255,193,7,.1);color:var(--gold);border:1px solid rgba(255,193,7,.2);border-radius:4px;padding:1px 6px">📧 Email</span>' : '',
+        ].filter(Boolean).join(' ');
+        return `<div class="al-item" style="border-left:3px solid ${a.active&&!a.triggered?meta.border:'var(--bdr)'}">
+          <div class="al-ico" style="background:${meta.color};font-size:18px">${meta.icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;margin-bottom:2px">${a.name}</div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:3px">${a.desc||''}${a.days?.length?' · '+a.days.join(', '):''}</div>
+            ${a.message?`<div style="font-size:11px;color:var(--text3);font-style:italic;margin-bottom:4px">"${a.message.slice(0,60)}${a.message.length>60?'…':''}"</div>`:''}
+            <div style="display:flex;gap:4px;flex-wrap:wrap">${badges}</div>
+            ${a.at?`<div style="font-size:10px;color:var(--gold);margin-top:3px">⚡ Last fired ${a.at}</div>`:''}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+            <span class="al-badge ${a.triggered?'ab-t':a.active?'ab-a':'ab-o'}">${a.triggered?'Fired':a.active?'Active':'Off'}</span>
+            <div style="display:flex;gap:5px;align-items:center">
+              <label class="tgl-wrap"><input type="checkbox" ${a.active?'checked':''} onchange="togAlert(${a.id})"><span class="tgl-track"></span></label>
+              <button class="ic-btn" onclick="openAlModal(${a.id})" title="Edit">✎</button>
+              <button class="btn btn-g btn-xs" onclick="fireReminderNow(${a.id})" title="Test">▶</button>
+              <button class="ic-btn del" onclick="rmAlert(${a.id})" title="Delete">✕</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+function alTab(tab,el){alTabCur=tab;renderAlerts();}
+function togAlert(id){const a=alertRules.find(x=>x.id===id);if(a)a.active=!a.active;renderAlerts();updateAlDot();saveCurrentUserData();}
+
+function rmAlert(id) {
+  const item = alertRules.find(a => a.id === id);
+  const label = item ? `"${item.name}"` : 'this item';
+  if(!confirm(`Delete ${label}?`)) return;
+  alertRules = alertRules.filter(a => a.id !== id);
+  renderAlerts(); updateAlDot(); saveCurrentUserData();
+  showNotif('Deleted', label + ' removed', 'info');
+}
+
+function clearAllAlerts() {
+  const count = alertRules.filter(a => ALERT_TYPES.has(a.type) || a.kind === 'alert').length;
+  if(!count) { showNotif('Nothing to clear', 'No trading alerts exist', 'info'); return; }
+  if(!confirm(`Delete all ${count} trading alert${count !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+  alertRules = alertRules.filter(a => !ALERT_TYPES.has(a.type) && a.kind !== 'alert');
+  renderAlerts(); updateAlDot(); saveCurrentUserData();
+  showNotif('Cleared ⚡', `${count} trading alert${count !== 1 ? 's' : ''} deleted`, 'info');
+}
+
+function clearAllReminders() {
+  const count = alertRules.filter(a => !ALERT_TYPES.has(a.type) && a.kind !== 'alert').length;
+  if(!count) { showNotif('Nothing to clear', 'No reminders exist', 'info'); return; }
+  if(!confirm(`Delete all ${count} reminder${count !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+  alertRules = alertRules.filter(a => ALERT_TYPES.has(a.type) || a.kind === 'alert');
+  renderAlerts(); updateAlDot(); saveCurrentUserData();
+  showNotif('Cleared 🔔', `${count} reminder${count !== 1 ? 's' : ''} deleted`, 'info');
+}
+
+// ── Day selector helpers ──────────────────────────────────
+function setAllDays(active) {
+  document.querySelectorAll('#rm-days .rm-day-btn').forEach(b => {
+    b.classList.toggle('active', active);
+  });
+}
+function setWeekdays() {
+  const weekdays = ['mon','tue','wed','thu','fri'];
+  document.querySelectorAll('#rm-days .rm-day-btn').forEach(b => {
+    b.classList.toggle('active', weekdays.includes(b.dataset.day));
+  });
+}
+// openAlModal defined below in reminder system
+
 
 // ═══════════════════════════════════════
 // TAG MANAGER
@@ -5899,6 +6721,12 @@ function addFuturesMult() {
 
 // ── Data ──
 function initData() {
+  // Refresh Firebase UI state
+  fbUpdateUI(!!_fbDb);
+  if(_fbDb) {
+    const autoEl = document.getElementById('fb-auto-sync');
+    if(autoEl) autoEl.checked = _fbAutoSync;
+  }
   // Populate PWA status card
   const pwaStatus = getPWAStatus();
   const lblEl = document.getElementById('pwa-status-label');
@@ -6473,10 +7301,10 @@ let tradingPlan = {
 
 let tradingGoals = [
   {id:'g1',name:'Achieve 65% win rate',type:'win-rate',target:65,period:'monthly',notes:'Consistent execution over chasing trades',completed:false,createdAt:'2025-03-01'},
-  {id:'g2',name:'Net $3,500 profit this month',type:'monthly-pnl',target:3500,period:'monthly',notes:'$175/day avg over 20 trading days',completed:false,createdAt:'2025-03-01'},
+  {id:'g2',name:'Net $3,500 profit this month',type:'monthly-pnl',target:3500,period:'monthly',pnlUnit:'dollar',notes:'$175/day avg over 20 trading days',completed:false,createdAt:'2025-03-01'},
   {id:'g3',name:'Maintain profit factor above 1.8',type:'profit-factor',target:1.8,period:'monthly',notes:'Focus on quality setups only',completed:false,createdAt:'2025-03-01'},
   {id:'g4',name:'Log 5 quality trades per week',type:'trade-count',target:5,period:'weekly',notes:'Discipline — not quantity for its own sake',completed:false,createdAt:'2025-03-01'},
-  {id:'g5',name:'Hit $200 daily target',type:'daily-pnl',target:200,period:'daily',notes:'Stop trading once daily target is reached',completed:false,createdAt:'2025-03-01'},
+  {id:'g5',name:'Hit $200 daily target',type:'daily-pnl',target:200,period:'daily',pnlUnit:'dollar',notes:'Stop trading once daily target is reached',completed:false,createdAt:'2025-03-01'},
 ];
 
 // Per-trade compliance: tradeId -> {compliant, violations[], reviewNote}
@@ -6777,7 +7605,19 @@ function goalProgress(g) {
   let current=0, pct=0, label='';
   const tgt = g.target;
   if(['daily-pnl','weekly-pnl','monthly-pnl'].includes(g.type)){
-    current=pnl; pct=tgt>0?pnl/tgt*100:0; label=fdSum(pnl)+' / '+fdSum(tgt);
+    if(g.pnlUnit === 'percent'){
+      // Percent mode: compare pnl as % of starting account balance
+      const acct = getActiveAccount();
+      const startBal = (acct?.balance || 50000);
+      const pnlPct = startBal > 0 ? Math.round(pnl / startBal * 1000) / 10 : 0; // 1dp
+      current = pnlPct;
+      pct     = tgt > 0 ? pnlPct / tgt * 100 : 0;
+      label   = pnlPct.toFixed(1) + '% / ' + tgt + '% of ' + fdSum(startBal);
+    } else {
+      // Dollar mode (default)
+      current = pnl; pct = tgt > 0 ? pnl / tgt * 100 : 0;
+      label   = fdSum(pnl) + ' / ' + fdSum(tgt);
+    }
   } else if(g.type==='win-rate'){
     current=winRate; pct=tgt>0?winRate/tgt*100:0; label=winRate+'% / '+tgt+'%';
   } else if(g.type==='trade-count'){
@@ -6822,6 +7662,7 @@ function renderGoals() {
           <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             <span class="tag tgr" style="font-size:10px">${goalPeriodLabel(g)}</span>
             <span class="tag tb" style="font-size:10px">${g.type.replace(/-/g,' ')}</span>
+            ${['daily-pnl','weekly-pnl','monthly-pnl'].includes(g.type)?`<span class="tag" style="font-size:10px;background:rgba(0,212,255,.1);color:var(--cyan);border:1px solid rgba(0,212,255,.2)">${g.pnlUnit==='percent'?'📊 % Target':'💵 $ Target'}</span>`:``}
             ${g.notes?`<span style="font-size:11px;color:var(--text3);font-style:italic">"${g.notes}"</span>`:''}
           </div>
         </div>
@@ -6868,21 +7709,134 @@ function openGoalModal(editId) {
   document.getElementById('gm-notes').value = g?.notes||'';
   document.getElementById('gm-start').value = g?.start||new Date().toISOString().slice(0,10);
   document.getElementById('gm-end').value = g?.end||'';
+  // Pre-seed pnlUnit so updateGoalModal picks it up
+  const _fieldsEl = document.getElementById('gm-fields');
+  if(_fieldsEl && g?.pnlUnit) _fieldsEl.dataset.pnlUnit = g.pnlUnit;
   updateGoalModal();
   document.getElementById('goal-modal').classList.add('open');
 }
 
 function updateGoalModal() {
-  const type = document.getElementById('gm-type').value;
+  const type   = document.getElementById('gm-type').value;
   const period = document.getElementById('gm-period').value;
-  const defaults = {'daily-pnl':200,'weekly-pnl':1000,'monthly-pnl':3500,'win-rate':60,'trade-count':20,'profit-factor':1.8,'max-drawdown':1000,'streak':5,'custom':0};
+  const isPnlType = ['daily-pnl','weekly-pnl','monthly-pnl'].includes(type);
   const g = editingGoalId ? tradingGoals.find(x=>x.id===editingGoalId) : null;
-  const val = g?.target ?? defaults[type] ?? 0;
-  const labelMap = {'daily-pnl':'Daily P&L Target ($)','weekly-pnl':'Weekly P&L Target ($)','monthly-pnl':'Monthly P&L Target ($)','win-rate':'Win Rate Target (%)','trade-count':'Number of Trades','profit-factor':'Profit Factor','max-drawdown':'Max Drawdown Limit ($)','streak':'Winning Streak Length','custom':'Target Value (optional)'};
   const fieldsEl = document.getElementById('gm-fields');
-  if(fieldsEl) fieldsEl.innerHTML = `<div class="fg"><label>${labelMap[type]||'Target'}</label><input id="gm-target" type="number" value="${val}" step="${['win-rate','profit-factor'].includes(type)?'0.1':'1'}"></div>`;
+  if(!fieldsEl) return;
+
+  // ── Determine current unit ──
+  // Priority: 1) what's already in the fieldsEl data attribute (set by clicking a button)
+  //           2) the saved value on the goal object (when editing)
+  //           3) default to 'dollar'
+  const unitFromDOM  = fieldsEl.dataset.pnlUnit;
+  const unitFromGoal = g?.pnlUnit;
+  const curUnit = (isPnlType && unitFromDOM) ? unitFromDOM
+                : (isPnlType && unitFromGoal) ? unitFromGoal
+                : 'dollar';
+
+  const defaults = {
+    'daily-pnl':   curUnit==='percent' ? 2   : 200,
+    'weekly-pnl':  curUnit==='percent' ? 5   : 1000,
+    'monthly-pnl': curUnit==='percent' ? 10  : 3500,
+    'win-rate':60, 'trade-count':20, 'profit-factor':1.8,
+    'max-drawdown':1000, 'streak':5, 'custom':0
+  };
+  const val = g?.target ?? defaults[type] ?? 0;
+
+  if(isPnlType) {
+    // P&L type — show $ / % toggle + dynamic label that reflects the active unit
+    const isDollar = curUnit !== 'percent';
+    const unitLabel   = isDollar ? 'Dollar Amount ($)' : 'Percent of Account Balance (%)';
+    const placeholder = isDollar ? 'e.g. 500' : 'e.g. 5 for 5%';
+    const step        = isDollar ? '1' : '0.1';
+    const hint        = isDollar
+      ? 'Progress tracked in net P&L dollars against a fixed dollar target.'
+      : 'Progress tracked as net P&L ÷ starting balance × 100.';
+
+    // Shared button style builder
+    const btn = (unit, emoji, label) => {
+      const active = curUnit === unit;
+      return `<div onclick="goalToggleUnit('${unit}')" id="gm-unit-${unit}"
+        style="flex:1;text-align:center;padding:9px 12px;border-radius:9px;cursor:pointer;
+               transition:all .18s;font-size:13px;font-weight:600;user-select:none;
+               background:${active ? 'rgba(0,212,255,.14)' : 'var(--bg3)'};
+               border:2px solid ${active ? 'var(--cyan)' : 'var(--bdr2)'};
+               color:${active ? 'var(--cyan)' : 'var(--text2)'};
+               box-shadow:${active ? 'inset 0 0 0 1px rgba(0,212,255,.15)' : 'none'}">
+        ${emoji} ${label}
+        ${active ? '<div style="width:20px;height:3px;background:var(--cyan);border-radius:2px;margin:5px auto 0"></div>' : ''}
+      </div>`;
+    };
+
+    fieldsEl.innerHTML = `
+      <div class="fg" style="margin-bottom:12px">
+        <label style="margin-bottom:6px;display:block">Target Type</label>
+        <div style="display:flex;gap:7px">
+          ${btn('dollar', '💵', 'Dollar ($)')}
+          ${btn('percent', '📊', 'Percent (%)')}
+        </div>
+      </div>
+      <div class="fg">
+        <label id="gm-target-label">P&L Target — <span style="color:var(--cyan);font-weight:700">${unitLabel}</span></label>
+        <input id="gm-target" type="number" value="${val}" step="${step}"
+               placeholder="${placeholder}" min="0" style="margin-top:5px">
+        <div style="font-size:10px;color:var(--text3);margin-top:5px;line-height:1.5" id="gm-target-hint">${hint}</div>
+      </div>`;
+
+    // Always write back so saveGoal can read it
+    fieldsEl.dataset.pnlUnit = curUnit;
+
+  } else {
+    // Non-P&L types — simple target field
+    const labelMap = {
+      'win-rate':'Win Rate Target (%)',
+      'trade-count':'Number of Trades',
+      'profit-factor':'Profit Factor',
+      'max-drawdown':'Max Drawdown Limit ($)',
+      'streak':'Winning Streak Length',
+      'custom':'Target Value (optional)'
+    };
+    fieldsEl.innerHTML = `<div class="fg"><label>${labelMap[type]||'Target'}</label>
+      <input id="gm-target" type="number" value="${val}"
+        step="${['win-rate','profit-factor'].includes(type)?'0.1':'1'}"></div>`;
+    fieldsEl.dataset.pnlUnit = '';
+  }
+
   const dr = document.getElementById('gm-date-range');
-  if(dr) dr.style.display = period==='custom'?'block':'none';
+  if(dr) dr.style.display = period==='custom' ? 'block' : 'none';
+}
+
+// Toggle $ / % unit for P&L goals (called by clicking the unit buttons)
+function goalToggleUnit(unit) {
+  const fieldsEl = document.getElementById('gm-fields');
+  if(!fieldsEl) return;
+
+  // Capture current user-entered value BEFORE re-rendering
+  const type     = document.getElementById('gm-type').value;
+  const tgtEl    = document.getElementById('gm-target');
+  const prevVal  = parseFloat(tgtEl?.value) || 0;
+  const prevUnit = fieldsEl.dataset.pnlUnit || 'dollar';
+
+  // Don't do anything if user clicked the already-active button
+  if(prevUnit === unit) return;
+
+  // Write the new unit so updateGoalModal sees it
+  fieldsEl.dataset.pnlUnit = unit;
+
+  // Decide what value to show after the switch
+  const dollarDefaults = {'daily-pnl':200,'weekly-pnl':1000,'monthly-pnl':3500};
+  const pctDefaults    = {'daily-pnl':2,  'weekly-pnl':5,   'monthly-pnl':10};
+  const prevDefault    = prevUnit === 'dollar' ? (dollarDefaults[type]||200) : (pctDefaults[type]||2);
+  const nextDefault    = unit     === 'dollar' ? (dollarDefaults[type]||200) : (pctDefaults[type]||2);
+  // Auto-fill new default if user hadn't changed from the old default, otherwise keep their value
+  const nextVal = (prevVal === 0 || prevVal === prevDefault) ? nextDefault : prevVal;
+
+  // Re-render (updateGoalModal reads fieldsEl.dataset.pnlUnit now set above)
+  updateGoalModal();
+
+  // Restore the value into the freshly rendered input
+  const newTgtEl = document.getElementById('gm-target');
+  if(newTgtEl) newTgtEl.value = nextVal;
 }
 
 function saveGoal() {
@@ -6894,12 +7848,16 @@ function saveGoal() {
   const notes = document.getElementById('gm-notes').value;
   const start = document.getElementById('gm-start').value;
   const end = document.getElementById('gm-end').value;
+  // Read pnlUnit from fieldsEl data attribute (only set for P&L goal types)
+  const isPnlType = ['daily-pnl','weekly-pnl','monthly-pnl'].includes(type);
+  const fieldsEl = document.getElementById('gm-fields');
+  const pnlUnit = isPnlType ? (fieldsEl?.dataset?.pnlUnit || 'dollar') : '';
   if(editingGoalId){
     const g = tradingGoals.find(x=>x.id===editingGoalId);
-    if(g) Object.assign(g,{name,type,period,target,notes,start,end});
+    if(g) Object.assign(g,{name,type,period,target,notes,start,end,pnlUnit});
     showNotif('Goal updated',name,'success');
   } else {
-    tradingGoals.push({id:'g'+Date.now(),name,type,period,target,notes,start,end,completed:false,createdAt:new Date().toISOString().slice(0,10)});
+    tradingGoals.push({id:'g'+Date.now(),name,type,period,target,notes,start,end,pnlUnit,completed:false,createdAt:new Date().toISOString().slice(0,10)});
     showNotif('Goal created',name,'success');
   }
   closeModal('goal-modal');
@@ -7921,6 +8879,7 @@ function snapshotUserData() {
     SETUP_TYPES: SETUP_TYPES,
     appSettings: appSettings,
     calChkSessions: calChkSessions,
+    marketOutlook: marketOutlook,
   };
 }
 
@@ -7943,6 +8902,11 @@ function applyUserData(data) {
   if(data.SETUP_TYPES)     SETUP_TYPES.splice(0, SETUP_TYPES.length, ...data.SETUP_TYPES);
   if(data.appSettings)     Object.assign(appSettings, data.appSettings);
   if(data.calChkSessions)  Object.assign(calChkSessions, data.calChkSessions);
+  if(data.marketOutlook) {
+    ['daily','weekly','monthly'].forEach(tf => {
+      if(data.marketOutlook[tf]) Object.assign(marketOutlook[tf], data.marketOutlook[tf]);
+    });
+  }
 }
 
 // ── Auto-save every 30 seconds while logged in ──
@@ -7959,6 +8923,10 @@ function startAutoSave() {
 function stopAutoSave() {
   if(_autoSaveInterval) clearInterval(_autoSaveInterval);
   _autoSaveInterval = null;
+}
+function stopAllSchedulers() {
+  stopAutoSave();
+  stopReminderScheduler();
 }
 
 // ── Login ──
@@ -8069,6 +9037,10 @@ function enterApp() {
   startAutoSave();
   const _wEmoji = appSettings.greetingEmojiSkinTone || appSettings.greetingEmoji || '👋';
   setTimeout(() => showNotif(`Welcome back, ${currentUser.displayName} ${_wEmoji}`, 'Your data has been loaded', 'success'), 600);
+  // Auto-reconnect Firebase if previously configured
+  setTimeout(() => fbLoadSavedConfig(), 1200);
+  // Start reminder scheduler
+  startReminderScheduler();
 }
 
 // ── Logout ──
@@ -8246,6 +9218,8 @@ function saveCurrentUserData() {
   const snap = snapshotUserData();
   const existing = loadUserData(currentUser.username) || {};
   saveUserData(currentUser.username, { ...existing, ...snap });
+  // Auto-push to Firebase if enabled
+  fbAutoSyncIfEnabled();
 }
 
 // ── Default data for new accounts ──
@@ -9398,6 +10372,1206 @@ function tourSpotlight(step) {
 function openHowToModal() {
   startTour();
 }
+
+
+// ═══════════════════════════════════════════════════════════
+// FIREBASE CLOUD SYNC
+// ═══════════════════════════════════════════════════════════
+
+let _fbApp = null;
+let _fbDb  = null;
+let _fbCfg = null;         // saved config
+let _fbAutoSync = false;
+
+const FB_CFG_KEY   = 'te_firebase_config';
+const FB_AUTOSYNC_KEY = 'te_firebase_autosync';
+
+// ── Initialise Firebase with a config object ──────────────
+function fbInit(cfg) {
+  return new Promise((resolve, reject) => {
+    loadFirebaseSDK(() => {
+      try {
+        // If already initialised with same config, reuse
+        if(_fbApp) {
+          try { firebase.app(); }
+          catch(e) { _fbApp = null; }
+        }
+        if(!_fbApp) {
+          _fbApp = firebase.initializeApp(cfg, 'tradeedge-' + Date.now());
+        }
+        _fbDb  = firebase.firestore(_fbApp);
+        _fbCfg = cfg;
+        resolve();
+      } catch(err) { reject(err); }
+    });
+  });
+}
+
+// ── Save config to localStorage and connect ───────────────
+async function fbSaveConfig() {
+  const cfg = {
+    apiKey:     document.getElementById('fb-api-key')?.value.trim(),
+    projectId:  document.getElementById('fb-project-id')?.value.trim(),
+    authDomain: document.getElementById('fb-auth-domain')?.value.trim(),
+    appId:      document.getElementById('fb-app-id')?.value.trim(),
+  };
+
+  if(!cfg.apiKey || !cfg.projectId) {
+    showNotif('Missing fields', 'API Key and Project ID are required', 'danger'); return;
+  }
+
+  showNotif('Connecting…', 'Loading Firebase SDK', 'info');
+  try {
+    await fbInit(cfg);
+    localStorage.setItem(FB_CFG_KEY, JSON.stringify(cfg));
+    fbUpdateUI(true);
+    showNotif('Firebase connected! ☁️', 'Your journal can now sync across devices', 'success');
+    // Auto-push on first connect
+    await fbPush();
+  } catch(err) {
+    showNotif('Connection failed', err.message || 'Check your config values', 'danger');
+    console.error('Firebase init error:', err);
+  }
+}
+
+// ── Load saved config on startup ──────────────────────────
+async function fbLoadSavedConfig() {
+  try {
+    const raw = localStorage.getItem(FB_CFG_KEY);
+    if(!raw) return;
+    const cfg = JSON.parse(raw);
+    if(!cfg.apiKey || !cfg.projectId) return;
+    await fbInit(cfg);
+    _fbAutoSync = localStorage.getItem(FB_AUTOSYNC_KEY) === 'true';
+    fbUpdateUI(true);
+    // Don't auto-pull on startup — let user decide to avoid overwriting local changes
+    showNotif('Firebase ready ☁️', 'Cloud sync active — use Push/Pull in Settings → Data', 'success');
+  } catch(err) {
+    console.warn('Firebase auto-load failed:', err.message);
+  }
+}
+
+// ── Push current data to Firestore ────────────────────────
+async function fbPush() {
+  if(!_fbDb || !currentUser) {
+    showNotif('Not connected', 'Set up Firebase in Settings → Data', 'danger'); return;
+  }
+  try {
+    const snap = snapshotUserData();
+    const docRef = _fbDb.collection('tradeedge_journals').doc(currentUser.username.toLowerCase());
+    // Firestore has a 1MB doc limit — store trades as a sub-collection if large
+    const payload = {
+      ...snap,
+      _syncedAt: new Date().toISOString(),
+      _version: 1,
+    };
+    // Remove media blobs from trades to stay under size limits (re-attach from local)
+    payload.trades = (snap.trades || []).map(t => ({...t, media: (t.media||[]).filter(m => !m.src?.startsWith('data:'))}));
+    await docRef.set(payload);
+    const ts = new Date().toLocaleTimeString();
+    fbUpdateLastSync('Pushed at ' + ts + ' — ' + (payload.trades.length) + ' trades uploaded');
+    showNotif('Pushed to cloud ☁️', payload.trades.length + ' trades synced', 'success');
+  } catch(err) {
+    showNotif('Push failed', err.message, 'danger');
+    console.error('fbPush error:', err);
+  }
+}
+
+// ── Pull data from Firestore and apply ────────────────────
+async function fbPull() {
+  if(!_fbDb || !currentUser) {
+    showNotif('Not connected', 'Set up Firebase in Settings → Data', 'danger'); return;
+  }
+  const docRef = _fbDb.collection('tradeedge_journals').doc(currentUser.username.toLowerCase());
+  try {
+    const snap = await docRef.get();
+    if(!snap.exists) {
+      showNotif('No cloud data', 'Nothing found for this username yet. Push first from another device.', 'info');
+      return;
+    }
+    const data = snap.data();
+    if(!confirm('Pull from cloud? This will replace your local trades, settings, and journal data with the cloud version.\n\nCloud data was last pushed: ' + (data._syncedAt || 'unknown'))) return;
+    applyUserData(data);
+    saveCurrentUserData();
+    // Refresh all views
+    const page = document.querySelector('.page.active')?.id?.replace('pg-','');
+    if(page) {
+      const refreshMap = {home:initHome,dashboard:initDashboard,calendar:renderCal,analytics:initAnalytics,trades:renderTrades,log:initLog,checklist:renderChecklist,settings:initSettings};
+      if(refreshMap[page]) refreshMap[page]();
+    }
+    const ts = new Date().toLocaleTimeString();
+    fbUpdateLastSync('Pulled at ' + ts + ' — ' + (data.trades?.length||0) + ' trades restored');
+    showNotif('Pulled from cloud ⬇️', (data.trades?.length||0) + ' trades restored', 'success');
+  } catch(err) {
+    showNotif('Pull failed', err.message, 'danger');
+    console.error('fbPull error:', err);
+  }
+}
+
+// ── Auto-sync hook: called from saveCurrentUserData ───────
+function fbAutoSyncIfEnabled() {
+  if(_fbDb && _fbAutoSync && currentUser) {
+    // Debounce: don't flood Firestore on rapid saves
+    clearTimeout(window._fbSyncTimer);
+    window._fbSyncTimer = setTimeout(() => fbPush(), 3000);
+  }
+}
+
+// ── Toggle auto-sync ──────────────────────────────────────
+function fbToggleAutoSync(enabled) {
+  _fbAutoSync = enabled;
+  localStorage.setItem(FB_AUTOSYNC_KEY, enabled ? 'true' : 'false');
+  showNotif(
+    enabled ? 'Auto-sync ON ☁️' : 'Auto-sync OFF',
+    enabled ? 'Journal pushes to Firebase on every save' : 'Manual Push/Pull only',
+    'info'
+  );
+}
+
+// ── Disconnect Firebase ───────────────────────────────────
+function fbDisconnect() {
+  if(!confirm('Disconnect Firebase? Your local data will be kept. You can reconnect anytime.')) return;
+  localStorage.removeItem(FB_CFG_KEY);
+  localStorage.removeItem(FB_AUTOSYNC_KEY);
+  _fbApp = null; _fbDb = null; _fbCfg = null; _fbAutoSync = false;
+  fbUpdateUI(false);
+  showNotif('Firebase disconnected', 'Cloud sync disabled. Data stays local.', 'info');
+}
+
+// ── Show existing config in fields for editing ────────────
+function fbShowExistingConfig() {
+  const raw = localStorage.getItem(FB_CFG_KEY);
+  if(!raw) return;
+  try {
+    const cfg = JSON.parse(raw);
+    const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = v||''; };
+    set('fb-api-key',     cfg.apiKey);
+    set('fb-project-id',  cfg.projectId);
+    set('fb-auth-domain', cfg.authDomain);
+    set('fb-app-id',      cfg.appId);
+  } catch(e) {}
+}
+
+// ── Update UI state ───────────────────────────────────────
+function fbUpdateUI(connected) {
+  const setupSec  = document.getElementById('fb-setup-section');
+  const connSec   = document.getElementById('fb-connected-section');
+  const badge     = document.getElementById('fb-status-badge');
+  const autoEl    = document.getElementById('fb-auto-sync');
+  const hasCfgBtn = document.getElementById('fb-has-config-btn');
+
+  if(connected) {
+    if(setupSec)  setupSec.style.display  = 'none';
+    if(connSec)   connSec.style.display   = 'block';
+    if(badge) {
+      badge.textContent = '● CONNECTED';
+      badge.style.background = 'rgba(0,230,118,.12)';
+      badge.style.color = 'var(--green)';
+      badge.style.borderColor = 'rgba(0,230,118,.3)';
+    }
+    if(autoEl) autoEl.checked = _fbAutoSync;
+  } else {
+    if(setupSec)  setupSec.style.display  = 'block';
+    if(connSec)   connSec.style.display   = 'none';
+    if(badge) {
+      badge.textContent = 'NOT SET UP';
+      badge.style.background = 'var(--bg3)';
+      badge.style.color = 'var(--text3)';
+      badge.style.borderColor = 'var(--bdr2)';
+    }
+    // Show "Use Saved Config" if a config exists
+    if(hasCfgBtn) hasCfgBtn.style.display = localStorage.getItem(FB_CFG_KEY) ? 'inline-flex' : 'none';
+  }
+}
+
+// ── Update last sync timestamp ────────────────────────────
+function fbUpdateLastSync(msg) {
+  const el = document.getElementById('fb-last-sync-info');
+  if(el) el.textContent = 'Last sync: ' + msg;
+}
+
+// ── Sync status indicator in topbar ──────────────────────
+function fbUpdateTopbarIndicator(status) {
+  let ind = document.getElementById('fb-topbar-dot');
+  if(!ind) {
+    // Create it next to the topbar account selector
+    ind = document.createElement('div');
+    ind.id = 'fb-topbar-dot';
+    ind.title = 'Firebase Cloud Sync';
+    ind.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;cursor:pointer;padding:3px 8px;border-radius:8px;transition:all .2s';
+    ind.onclick = () => { nav('settings'); setTimeout(()=>sTb('data',document.querySelectorAll('#pg-settings .tab')[5]),150); };
+    const accWrap = document.getElementById('acc-picker-wrap');
+    if(accWrap) accWrap.parentNode.insertBefore(ind, accWrap);
+  }
+  const styles = {
+    connected: { text: '☁️ Synced',   bg: 'rgba(0,230,118,.1)',  color: 'var(--green)' },
+    syncing:   { text: '☁️ Syncing…', bg: 'rgba(0,212,255,.1)',  color: 'var(--cyan)'  },
+    error:     { text: '☁️ Error',    bg: 'rgba(255,71,87,.1)',  color: 'var(--red)'   },
+    off:       { text: '',            bg: 'transparent',          color: 'transparent'  },
+  };
+  const s = styles[status] || styles.off;
+  ind.textContent = s.text;
+  ind.style.background = s.bg;
+  ind.style.color = s.color;
+  ind.style.display = status === 'off' ? 'none' : 'flex';
+}
+
+
+
+// ═══════════════════════════════════════════════════════════
+// MARKET OUTLOOK
+// ═══════════════════════════════════════════════════════════
+
+let _outlookTab = 'daily';
+
+function initOutlook() {
+  outlookTab(_outlookTab, document.getElementById('ot-' + _outlookTab));
+  renderOutlookConviction('daily');
+  renderOutlookConviction('weekly');
+  renderOutlookConviction('monthly');
+  populateOutlookFields();
+  renderOutlookBiasButtons();
+  renderOutlookSavedAt();
+}
+
+// ── Tab switching ──────────────────────────────────────────
+function outlookTab(tf, el) {
+  _outlookTab = tf;
+  ['daily','weekly','monthly'].forEach(t => {
+    const tab = document.getElementById('ot-' + t);
+    const pnl = document.getElementById('op-' + t);
+    if(tab) tab.classList.toggle('active', t === tf);
+    if(pnl) pnl.style.display = t === tf ? 'block' : 'none';
+  });
+}
+
+// ── Conviction stars (1–5) ─────────────────────────────────
+function renderOutlookConviction(tf) {
+  const el = document.getElementById('ob-' + tf + '-conv');
+  if(!el) return;
+  const cur = marketOutlook[tf].conviction || 0;
+  el.innerHTML = [1,2,3,4,5].map(n => `
+    <div onclick="setOutlookConviction('${tf}',${n})"
+      title="${n} / 5"
+      style="width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+             cursor:pointer;transition:all .15s;font-size:16px;
+             background:${n <= cur ? 'rgba(0,212,255,.12)' : 'var(--bg3)'};
+             border:1.5px solid ${n <= cur ? 'var(--cyan)' : 'var(--bdr2)'}">
+      ${'⚡'.repeat(1)}
+    </div>`).join('');
+  // Simpler label
+  el.innerHTML = [1,2,3,4,5].map(n => {
+    const active = n <= cur;
+    return `<div onclick="setOutlookConviction('${tf}',${n})"
+      style="flex:1;height:28px;border-radius:7px;cursor:pointer;transition:all .15s;
+             background:${active ? 'var(--cyan)' : 'var(--bg3)'};
+             border:1.5px solid ${active ? 'var(--cyan)' : 'var(--bdr2)'};
+             display:flex;align-items:center;justify-content:center;
+             font-size:10px;font-weight:700;color:${active ? '#000' : 'var(--text3)'}">
+      ${n}
+    </div>`;
+  }).join('');
+}
+
+function setOutlookConviction(tf, n) {
+  marketOutlook[tf].conviction = n;
+  renderOutlookConviction(tf);
+}
+
+// ── Bias buttons ───────────────────────────────────────────
+function setOutlookBias(tf, bias, el) {
+  marketOutlook[tf].bias = bias;
+  renderOutlookBiasButtons();
+}
+
+function renderOutlookBiasButtons() {
+  ['daily','weekly','monthly'].forEach(tf => {
+    const cur = marketOutlook[tf].bias;
+    const biases = ['bullish','neutral','bearish'];
+    const styles = {
+      bullish: { active: 'rgba(0,230,118,.12)', border: 'rgba(0,230,118,.4)', color: 'var(--green)' },
+      neutral: { active: 'rgba(255,193,7,.10)',  border: 'rgba(255,193,7,.35)', color: 'var(--gold)' },
+      bearish: { active: 'rgba(255,71,87,.12)',  border: 'rgba(255,71,87,.4)',  color: 'var(--red)' },
+    };
+    biases.forEach(b => {
+      const btn = document.getElementById('ob-' + tf + '-' + b);
+      if(!btn) return;
+      const isActive = cur === b;
+      const s = styles[b];
+      btn.style.background   = isActive ? s.active   : 'var(--bg3)';
+      btn.style.borderColor  = isActive ? s.border   : 'var(--bdr2)';
+      btn.style.color        = isActive ? s.color    : 'var(--text2)';
+      btn.style.boxShadow    = isActive ? `0 0 0 1px ${s.border}` : 'none';
+    });
+  });
+}
+
+// ── Field map: fieldId → marketOutlook path ────────────────
+const OUTLOOK_FIELD_MAP = {
+  // Daily
+  'od-r1':'daily.r1','od-r2':'daily.r2','od-s1':'daily.s1','od-s2':'daily.s2','od-poc':'daily.poc',
+  'od-event1':'daily.event1','od-event2':'daily.event2','od-event3':'daily.event3','od-impact':'daily.impact',
+  'od-premarket':'daily.premarket','od-plan':'daily.plan','od-avoid':'daily.avoid',
+  'od-bias-result':'daily.biasResult','od-grade':'daily.grade','od-lessons':'daily.lessons',
+  // Weekly
+  'ow-r1':'weekly.r1','ow-s1':'weekly.s1','ow-range':'weekly.range','ow-poc':'weekly.poc',
+  'ow-event1':'weekly.event1','ow-event2':'weekly.event2','ow-earnings':'weekly.earnings',
+  'ow-macro':'weekly.macro','ow-plan':'weekly.plan',
+  'ow-target-pnl':'weekly.targetPnl','ow-max-loss':'weekly.maxLoss','ow-trade-count':'weekly.tradeCount',
+  'ow-outcome':'weekly.outcome','ow-grade':'weekly.grade','ow-review':'weekly.review',
+  // Monthly
+  'om-r1':'monthly.r1','om-s1':'monthly.s1','om-ath':'monthly.ath','om-poc':'monthly.poc',
+  'om-fed':'monthly.fed','om-earnings':'monthly.earnings',
+  'om-sector-lead':'monthly.sectorLead','om-sector-lag':'monthly.sectorLag','om-risk':'monthly.risk',
+  'om-thesis':'monthly.thesis','om-setups':'monthly.setups',
+  'om-target-pnl':'monthly.targetPnl','om-max-dd':'monthly.maxDd','om-wr-goal':'monthly.wrGoal',
+  'om-thesis-result':'monthly.thesisResult','om-grade':'monthly.grade','om-review':'monthly.review',
+};
+
+// ── Populate all form fields from marketOutlook data ────────
+function populateOutlookFields() {
+  Object.entries(OUTLOOK_FIELD_MAP).forEach(([fieldId, path]) => {
+    const el = document.getElementById(fieldId);
+    if(!el) return;
+    const [tf, key] = path.split('.');
+    el.value = marketOutlook[tf]?.[key] || '';
+  });
+}
+
+// ── Collect all form fields into marketOutlook ──────────────
+function collectOutlookFields() {
+  Object.entries(OUTLOOK_FIELD_MAP).forEach(([fieldId, path]) => {
+    const el = document.getElementById(fieldId);
+    if(!el) return;
+    const [tf, key] = path.split('.');
+    marketOutlook[tf][key] = el.value;
+  });
+}
+
+// ── Save ────────────────────────────────────────────────────
+function saveOutlook() {
+  collectOutlookFields();
+  saveCurrentUserData();
+  renderOutlookSavedAt();
+  showNotif('Outlook saved 📊', 'Your market analysis has been saved', 'success');
+}
+
+// ── Clear all fields for current tab ───────────────────────
+function clearOutlook() {
+  if(!confirm('Clear all fields for all timeframes? This cannot be undone.')) return;
+  ['daily','weekly','monthly'].forEach(tf => {
+    Object.keys(marketOutlook[tf]).forEach(k => {
+      marketOutlook[tf][k] = typeof marketOutlook[tf][k] === 'number' ? 0 : '';
+    });
+  });
+  populateOutlookFields();
+  renderOutlookBiasButtons();
+  renderOutlookConviction('daily');
+  renderOutlookConviction('weekly');
+  renderOutlookConviction('monthly');
+  renderOutlookSavedAt();
+  showNotif('Outlook cleared', 'All fields reset', 'info');
+}
+
+// ── Saved-at timestamp ──────────────────────────────────────
+function renderOutlookSavedAt() {
+  const el = document.getElementById('outlook-saved-at');
+  if(!el) return;
+  const hasBias = ['daily','weekly','monthly'].some(tf => marketOutlook[tf].bias);
+  el.textContent = hasBias
+    ? 'Last updated: ' + new Date().toLocaleString([], {dateStyle:'short',timeStyle:'short'})
+    : '';
+}
+
+// ── Home screen bias summary strip ─────────────────────────
+function renderHomeBiasSummary() {
+  const el = document.getElementById('h-outlook-summary');
+  if(!el) return;
+  const biasIcon = { bullish:'🟢', neutral:'⚪', bearish:'🔴', '':'—' };
+  const biasLabel = { bullish:'Bullish', neutral:'Neutral', bearish:'Bearish', '':'No bias' };
+  const d = marketOutlook.daily;
+  const w = marketOutlook.weekly;
+  const m = marketOutlook.monthly;
+  const any = d.bias || w.bias || m.bias;
+  if(!any) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:var(--text)">🔭 Market Outlook</div>
+      <button class="btn btn-g btn-xs" onclick="nav('outlook')">Update →</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <div style="flex:1;min-width:80px;background:var(--bg3);border-radius:8px;padding:8px 10px;text-align:center">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:4px">Daily</div>
+        <div style="font-size:18px">${biasIcon[d.bias||'']}</div>
+        <div style="font-size:10px;font-weight:600;color:var(--text2);margin-top:2px">${biasLabel[d.bias||'']}</div>
+        ${d.conviction?`<div style="font-size:9px;color:var(--text3)">Conv. ${d.conviction}/5</div>`:''}
+      </div>
+      <div style="flex:1;min-width:80px;background:var(--bg3);border-radius:8px;padding:8px 10px;text-align:center">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:4px">Weekly</div>
+        <div style="font-size:18px">${biasIcon[w.bias||'']}</div>
+        <div style="font-size:10px;font-weight:600;color:var(--text2);margin-top:2px">${biasLabel[w.bias||'']}</div>
+        ${w.conviction?`<div style="font-size:9px;color:var(--text3)">Conv. ${w.conviction}/5</div>`:''}
+      </div>
+      <div style="flex:1;min-width:80px;background:var(--bg3);border-radius:8px;padding:8px 10px;text-align:center">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:4px">Monthly</div>
+        <div style="font-size:18px">${biasIcon[m.bias||'']}</div>
+        <div style="font-size:10px;font-weight:600;color:var(--text2);margin-top:2px">${biasLabel[m.bias||'']}</div>
+        ${m.conviction?`<div style="font-size:9px;color:var(--text3)">Conv. ${m.conviction}/5</div>`:''}
+      </div>
+    </div>
+    ${d.plan ? `<div style="margin-top:8px;font-size:11px;color:var(--text2);line-height:1.6;padding:8px 10px;background:var(--bg3);border-radius:7px;border-left:3px solid var(--cyan)">${d.plan.slice(0,160)}${d.plan.length>160?'…':''}</div>` : ''}`;
+}
+
+
+
+// ═══════════════════════════════════════════════════════════
+// MARKET OUTLOOK — EXPORT (PDF + CSV)
+// ═══════════════════════════════════════════════════════════
+
+function exportOutlook(format) {
+  // Always collect current field values first
+  collectOutlookFields();
+  if(format === 'csv') exportOutlookCSV();
+  else exportOutlookPDF();
+}
+
+// ─────────────────────────────────────────────────────────
+// CSV EXPORT
+// ─────────────────────────────────────────────────────────
+function exportOutlookCSV() {
+  const d = marketOutlook.daily;
+  const w = marketOutlook.weekly;
+  const m = marketOutlook.monthly;
+  const q = v => `"${(v||'').replace(/"/g,'""')}"`;
+  const now = new Date().toLocaleDateString();
+
+  const rows = [
+    ['TRADEEDGE PRO — MARKET OUTLOOK REPORT'],
+    ['Exported:', now],
+    ['Account:', getActiveAccount()?.name || ''],
+    [],
+    // ── Daily ──
+    ['=== DAILY OUTLOOK ==='],
+    ['Field', 'Value'],
+    ['Bias',            d.bias || '—'],
+    ['Conviction',      d.conviction ? d.conviction + '/5' : '—'],
+    ['Resistance 1',    d.r1 || '—'],
+    ['Resistance 2',    d.r2 || '—'],
+    ['Support 1',       d.s1 || '—'],
+    ['Support 2',       d.s2 || '—'],
+    ['POC / VWAP',      d.poc || '—'],
+    ['Event 1',         d.event1 || '—'],
+    ['Event 2',         d.event2 || '—'],
+    ['Event 3',         d.event3 || '—'],
+    ['Expected Impact', d.impact || '—'],
+    ['Pre-Market Analysis', d.premarket || '—'],
+    ['Trade Plan',      d.plan || '—'],
+    ['Will NOT Do',     d.avoid || '—'],
+    ['Bias Played Out', d.biasResult || '—'],
+    ['Session Grade',   d.grade || '—'],
+    ['Lessons Learned', d.lessons || '—'],
+    [],
+    // ── Weekly ──
+    ['=== WEEKLY OUTLOOK ==='],
+    ['Field', 'Value'],
+    ['Bias',            w.bias || '—'],
+    ['Conviction',      w.conviction ? w.conviction + '/5' : '—'],
+    ['Weekly Resistance', w.r1 || '—'],
+    ['Weekly Support',  w.s1 || '—'],
+    ['Weekly Range',    w.range || '—'],
+    ['Weekly POC',      w.poc || '—'],
+    ['Event 1',         w.event1 || '—'],
+    ['Event 2',         w.event2 || '—'],
+    ['Earnings',        w.earnings || '—'],
+    ['Macro / Context', w.macro || '—'],
+    ['Weekly Game Plan', w.plan || '—'],
+    ['P&L Target ($)',  w.targetPnl || '—'],
+    ['Max Loss ($)',    w.maxLoss || '—'],
+    ['Trade Count Goal', w.tradeCount || '—'],
+    ['Outcome vs Plan', w.outcome || '—'],
+    ['Week Grade',      w.grade || '—'],
+    ['Weekly Takeaways', w.review || '—'],
+    [],
+    // ── Monthly ──
+    ['=== MONTHLY OUTLOOK ==='],
+    ['Field', 'Value'],
+    ['Bias',            m.bias || '—'],
+    ['Conviction',      m.conviction ? m.conviction + '/5' : '—'],
+    ['Monthly Resistance', m.r1 || '—'],
+    ['Monthly Support', m.s1 || '—'],
+    ['ATH / Key Range', m.ath || '—'],
+    ['Monthly POC',     m.poc || '—'],
+    ['Fed / Rate Outlook', m.fed || '—'],
+    ['Earnings Season', m.earnings || '—'],
+    ['Leading Sector',  m.sectorLead || '—'],
+    ['Lagging Sector',  m.sectorLag || '—'],
+    ['Biggest Risk',    m.risk || '—'],
+    ['Monthly Thesis',  m.thesis || '—'],
+    ['Best Setups',     m.setups || '—'],
+    ['Monthly P&L Target ($)', m.targetPnl || '—'],
+    ['Max Drawdown ($)', m.maxDd || '—'],
+    ['Win Rate Goal (%)', m.wrGoal || '—'],
+    ['Thesis Accuracy', m.thesisResult || '—'],
+    ['Month Grade',     m.grade || '—'],
+    ['Monthly Review',  m.review || '—'],
+  ];
+
+  const csv = rows.map(r =>
+    r.length === 0 ? '' :
+    r.length === 1 ? q(r[0]) :
+    r.map(q).join(',')
+  ).join('\n');
+
+  const filename = 'tradeedge_outlook_' + new Date().toISOString().slice(0,10) + '.csv';
+  downloadFile(filename, 'text/csv;charset=utf-8', '\uFEFF' + csv);
+}
+
+// ─────────────────────────────────────────────────────────
+// PDF EXPORT  (print-to-PDF via styled iframe)
+// ─────────────────────────────────────────────────────────
+function exportOutlookPDF() {
+  const d = marketOutlook.daily;
+  const w = marketOutlook.weekly;
+  const m = marketOutlook.monthly;
+  const now = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+  const acct = getActiveAccount()?.name || '';
+
+  const biasColor = {bullish:'#00e676', neutral:'#ffc107', bearish:'#ff4757', '':'#888'};
+  const biasLabel = {bullish:'🟢 Bullish', neutral:'⚪ Neutral', bearish:'🔴 Bearish', '':'— Not set'};
+  const conv = n => n ? '●'.repeat(n) + '○'.repeat(5-n) + ` (${n}/5)` : '—';
+  const val  = v => v || '<span style="color:#999">—</span>';
+  const para = v => v ? `<p style="margin:0;white-space:pre-wrap;line-height:1.65">${v.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>` : '<p style="color:#999;margin:0">—</p>';
+
+  const section = (title, rows) => `
+    <div class="section">
+      <div class="sec-title">${title}</div>
+      <table class="data-table">
+        ${rows.map(([label, value]) => `
+          <tr>
+            <td class="label-col">${label}</td>
+            <td class="value-col">${value}</td>
+          </tr>`).join('')}
+      </table>
+    </div>`;
+
+  const biasBadge = (tf, data) => `
+    <div class="bias-badge" style="border-left-color:${biasColor[data.bias||'']}">
+      <div class="bias-tf">${tf}</div>
+      <div class="bias-label" style="color:${biasColor[data.bias||'']}">${biasLabel[data.bias||'']}</div>
+      <div class="bias-conv">${conv(data.conviction)}</div>
+    </div>`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Market Outlook Report — TradeEdge Pro</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 11pt; color: #1a1a2e; background: #fff; padding: 0; }
+
+  /* Page header */
+  .page-header { background: #1E3A5F; color: #fff; padding: 22px 32px 18px; }
+  .app-name { font-size: 10pt; letter-spacing: 1px; text-transform: uppercase; opacity: .7; margin-bottom: 4px; }
+  .report-title { font-size: 20pt; font-weight: 700; margin-bottom: 4px; }
+  .report-meta { font-size: 9pt; opacity: .75; }
+
+  /* Bias summary strip */
+  .bias-strip { display: flex; gap: 0; border-bottom: 2px solid #e8eef4; background: #f8fafc; }
+  .bias-badge { flex: 1; padding: 14px 20px; border-left: 4px solid #ccc; }
+  .bias-tf { font-size: 8pt; text-transform: uppercase; letter-spacing: .8px; color: #666; margin-bottom: 4px; font-weight: 600; }
+  .bias-label { font-size: 13pt; font-weight: 700; margin-bottom: 3px; }
+  .bias-conv { font-size: 9pt; color: #888; letter-spacing: 1px; }
+
+  /* Content */
+  .content { padding: 24px 32px; }
+  .section { margin-bottom: 22px; }
+  .sec-title { font-size: 12pt; font-weight: 700; color: #1E3A5F; border-bottom: 2px solid #2E75B6; padding-bottom: 5px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .5px; }
+  .sub-sec { font-size: 10pt; font-weight: 700; color: #444; margin: 12px 0 6px; border-left: 3px solid #2E75B6; padding-left: 8px; }
+
+  /* Tables */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table tr:nth-child(even) td { background: #f4f7fa; }
+  .label-col { width: 200px; padding: 6px 10px; font-weight: 600; color: #444; font-size: 9.5pt; vertical-align: top; border: 1px solid #dce4ee; }
+  .value-col { padding: 6px 12px; font-size: 9.5pt; color: #222; vertical-align: top; border: 1px solid #dce4ee; }
+
+  /* Grid for key levels */
+  .levels-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .levels-grid td { border: 1px solid #dce4ee; padding: 6px 10px; font-size: 9.5pt; }
+  .levels-grid .lbl { font-weight: 600; color: #444; background: #f4f7fa; width: 120px; }
+
+  /* Divider between timeframes */
+  .tf-divider { border: none; border-top: 3px solid #1E3A5F; margin: 28px 0 20px; }
+
+  /* Grade badge */
+  .grade { display: inline-block; background: #1E3A5F; color: #fff; border-radius: 6px; padding: 2px 10px; font-weight: 700; font-size: 10pt; margin-left: 8px; }
+
+  /* Footer */
+  .page-footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid #dce4ee; font-size: 8pt; color: #999; text-align: center; }
+
+  @media print {
+    body { padding: 0; }
+    .page-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .bias-strip { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .sec-title { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .data-table tr:nth-child(even) td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .label-col { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    @page { margin: 0.6in; size: letter; }
+  }
+
+/* ── Reminder Alert Modal ────────────────────────────────── */
+.rm-type-chip{
+  padding:7px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;
+  border:2px solid var(--bdr2);background:var(--bg3);color:var(--text2);
+  transition:all .18s;user-select:none;display:inline-flex;align-items:center;gap:4px;
+  -webkit-tap-highlight-color:transparent;
+}
+.rm-type-chip:hover{border-color:rgba(0,212,255,.4);color:var(--text);background:var(--bg4)}
+.rm-type-chip.sel{
+  background:rgba(0,212,255,.16);border-color:var(--cyan);color:var(--cyan);
+  box-shadow:0 0 0 1px rgba(0,212,255,.2);
+}
+.rm-type-chip.sel::before{content:'✓ ';font-size:10px}
+.rm-day-btn{
+  border-radius:9px;cursor:pointer;border:2px solid var(--bdr);
+  background:var(--bg3);text-align:center;padding:7px 2px 6px;
+  transition:all .18s;user-select:none;-webkit-tap-highlight-color:transparent;
+  opacity:.5;
+}
+.rm-day-letter{
+  font-size:14px;font-weight:800;color:var(--text3);
+  line-height:1;margin-bottom:3px;
+}
+.rm-day-label{
+  font-size:9px;font-weight:600;color:var(--text3);
+  letter-spacing:.2px;text-transform:uppercase;
+}
+.rm-day-btn:hover{opacity:.8;border-color:rgba(0,212,255,.4)}
+.rm-day-btn:hover .rm-day-letter,.rm-day-btn:hover .rm-day-label{color:var(--text2)}
+.rm-day-btn.active{
+  background:var(--cyan);border-color:var(--cyan);
+  box-shadow:0 2px 10px rgba(0,212,255,.4);
+  opacity:1;
+}
+.rm-day-btn.active .rm-day-letter{color:#000;font-size:15px;}
+.rm-day-btn.active .rm-day-label{color:rgba(0,0,0,.7);}
+
+/* reminder banner removed */
+
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="app-name">TradeEdge Pro</div>
+  <div class="report-title">🔭 Market Outlook Report</div>
+  <div class="report-meta">Generated: ${now}${acct ? '  ·  Account: ' + acct : ''}</div>
+</div>
+
+<div class="bias-strip">
+  ${biasBadge('Daily', d)}
+  ${biasBadge('Weekly', w)}
+  ${biasBadge('Monthly', m)}
+</div>
+
+<div class="content">
+
+  <!-- ══ DAILY ══ -->
+  <div class="section">
+    <div class="sec-title">📅 Daily Outlook</div>
+
+    <div class="sub-sec">Key Levels</div>
+    <table class="data-table">
+      <tr><td class="label-col">Resistance 1</td><td class="value-col">${val(d.r1)}</td>
+          <td class="label-col">Resistance 2</td><td class="value-col">${val(d.r2)}</td></tr>
+      <tr><td class="label-col">Support 1</td><td class="value-col">${val(d.s1)}</td>
+          <td class="label-col">Support 2</td><td class="value-col">${val(d.s2)}</td></tr>
+      <tr><td class="label-col">POC / VWAP / Pivot</td><td class="value-col" colspan="3">${val(d.poc)}</td></tr>
+    </table>
+
+    <div class="sub-sec">Catalysts & Events</div>
+    <table class="data-table">
+      <tr><td class="label-col">Event 1</td><td class="value-col">${val(d.event1)}</td></tr>
+      <tr><td class="label-col">Event 2</td><td class="value-col">${val(d.event2)}</td></tr>
+      <tr><td class="label-col">Event 3</td><td class="value-col">${val(d.event3)}</td></tr>
+      <tr><td class="label-col">Expected Impact</td><td class="value-col">${val(d.impact)}</td></tr>
+    </table>
+
+    <div class="sub-sec">Analysis</div>
+    <table class="data-table">
+      <tr><td class="label-col">Pre-Market Analysis</td><td class="value-col">${para(d.premarket)}</td></tr>
+      <tr><td class="label-col">Trade Plan</td><td class="value-col">${para(d.plan)}</td></tr>
+      <tr><td class="label-col">Will NOT Do Today</td><td class="value-col">${para(d.avoid)}</td></tr>
+    </table>
+
+    <div class="sub-sec">End-of-Day Review</div>
+    <table class="data-table">
+      <tr><td class="label-col">Bias Played Out?</td><td class="value-col">${val(d.biasResult)}</td>
+          <td class="label-col">Session Grade</td><td class="value-col">${val(d.grade)}</td></tr>
+      <tr><td class="label-col">Lessons Learned</td><td class="value-col" colspan="3">${para(d.lessons)}</td></tr>
+    </table>
+  </div>
+
+  <hr class="tf-divider">
+
+  <!-- ══ WEEKLY ══ -->
+  <div class="section">
+    <div class="sec-title">📆 Weekly Outlook</div>
+
+    <div class="sub-sec">Key Levels</div>
+    <table class="data-table">
+      <tr><td class="label-col">Weekly Resistance</td><td class="value-col">${val(w.r1)}</td>
+          <td class="label-col">Weekly Support</td><td class="value-col">${val(w.s1)}</td></tr>
+      <tr><td class="label-col">Weekly Range</td><td class="value-col">${val(w.range)}</td>
+          <td class="label-col">Weekly POC</td><td class="value-col">${val(w.poc)}</td></tr>
+    </table>
+
+    <div class="sub-sec">Catalysts</div>
+    <table class="data-table">
+      <tr><td class="label-col">High-Impact Event 1</td><td class="value-col">${val(w.event1)}</td></tr>
+      <tr><td class="label-col">High-Impact Event 2</td><td class="value-col">${val(w.event2)}</td></tr>
+      <tr><td class="label-col">Earnings This Week</td><td class="value-col">${val(w.earnings)}</td></tr>
+    </table>
+
+    <div class="sub-sec">Analysis</div>
+    <table class="data-table">
+      <tr><td class="label-col">Macro / Market Context</td><td class="value-col">${para(w.macro)}</td></tr>
+      <tr><td class="label-col">Weekly Game Plan</td><td class="value-col">${para(w.plan)}</td></tr>
+    </table>
+
+    <div class="sub-sec">Targets</div>
+    <table class="data-table">
+      <tr><td class="label-col">P&amp;L Target ($)</td><td class="value-col">${w.targetPnl ? '$' + w.targetPnl : '—'}</td>
+          <td class="label-col">Max Loss Limit ($)</td><td class="value-col">${w.maxLoss ? '$' + w.maxLoss : '—'}</td>
+          <td class="label-col">Trade Count Goal</td><td class="value-col">${val(w.tradeCount)}</td></tr>
+    </table>
+
+    <div class="sub-sec">Weekly Review</div>
+    <table class="data-table">
+      <tr><td class="label-col">Outcome vs Plan</td><td class="value-col">${val(w.outcome)}</td>
+          <td class="label-col">Week Grade</td><td class="value-col">${val(w.grade)}</td></tr>
+      <tr><td class="label-col">Weekly Takeaways</td><td class="value-col" colspan="3">${para(w.review)}</td></tr>
+    </table>
+  </div>
+
+  <hr class="tf-divider">
+
+  <!-- ══ MONTHLY ══ -->
+  <div class="section">
+    <div class="sec-title">🗓 Monthly Outlook</div>
+
+    <div class="sub-sec">Key Levels</div>
+    <table class="data-table">
+      <tr><td class="label-col">Monthly Resistance</td><td class="value-col">${val(m.r1)}</td>
+          <td class="label-col">Monthly Support</td><td class="value-col">${val(m.s1)}</td></tr>
+      <tr><td class="label-col">ATH / Key Range</td><td class="value-col">${val(m.ath)}</td>
+          <td class="label-col">Monthly POC</td><td class="value-col">${val(m.poc)}</td></tr>
+    </table>
+
+    <div class="sub-sec">Macro Themes</div>
+    <table class="data-table">
+      <tr><td class="label-col">Fed / Rate Outlook</td><td class="value-col">${val(m.fed)}</td>
+          <td class="label-col">Earnings Season</td><td class="value-col">${val(m.earnings)}</td></tr>
+      <tr><td class="label-col">Leading Sector</td><td class="value-col">${val(m.sectorLead)}</td>
+          <td class="label-col">Lagging / Avoiding</td><td class="value-col">${val(m.sectorLag)}</td></tr>
+      <tr><td class="label-col">Biggest Risk</td><td class="value-col" colspan="3">${val(m.risk)}</td></tr>
+    </table>
+
+    <div class="sub-sec">Analysis & Strategy</div>
+    <table class="data-table">
+      <tr><td class="label-col">Monthly Thesis</td><td class="value-col">${para(m.thesis)}</td></tr>
+      <tr><td class="label-col">Best Setups to Focus On</td><td class="value-col">${para(m.setups)}</td></tr>
+    </table>
+
+    <div class="sub-sec">Targets</div>
+    <table class="data-table">
+      <tr><td class="label-col">Monthly P&amp;L Target ($)</td><td class="value-col">${m.targetPnl ? '$' + m.targetPnl : '—'}</td>
+          <td class="label-col">Max Drawdown ($)</td><td class="value-col">${m.maxDd ? '$' + m.maxDd : '—'}</td>
+          <td class="label-col">Win Rate Goal (%)</td><td class="value-col">${m.wrGoal ? m.wrGoal + '%' : '—'}</td></tr>
+    </table>
+
+    <div class="sub-sec">Monthly Review</div>
+    <table class="data-table">
+      <tr><td class="label-col">Thesis Accuracy</td><td class="value-col">${val(m.thesisResult)}</td>
+          <td class="label-col">Month Grade</td><td class="value-col">${val(m.grade)}</td></tr>
+      <tr><td class="label-col">Monthly Review Notes</td><td class="value-col" colspan="3">${para(m.review)}</td></tr>
+    </table>
+  </div>
+
+  <div class="page-footer">
+    TradeEdge Pro — Private Trading Journal &nbsp;·&nbsp; Generated ${now} &nbsp;·&nbsp; All data is private and stored locally on your device.
+  </div>
+
+</div>
+</body>
+</html>`;
+
+  // Open in a new window and trigger print dialog
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if(!win) {
+    showNotif('Popup blocked', 'Allow popups for this page to export PDF', 'danger');
+    return;
+  }
+  win.document.write(html);
+  win.document.close();
+  // Give browser time to render before print dialog
+  setTimeout(() => {
+    win.focus();
+    win.print();
+  }, 600);
+  showNotif('PDF ready 📄', 'Use your browser\'s print dialog → Save as PDF', 'info');
+}
+
+
+
+// ═══════════════════════════════════════════════════════════
+// REMINDER ALERT SYSTEM
+// ═══════════════════════════════════════════════════════════
+
+// ─ Type metadata ─────────────────────────────────────────
+const RM_TYPES = {
+  checklist:  { icon:'✅', label:'Checklist',          color:'rgba(0,230,118,.12)',  border:'rgba(0,230,118,.35)',  action:{label:'Open Checklist',  fn:"nav('checklist')"}},
+  journal:    { icon:'📋', label:'Journal Trades',      color:'rgba(0,212,255,.12)',  border:'rgba(0,212,255,.35)', action:{label:'Add Trade',       fn:"nav('log')"}},
+  analysis:   { icon:'📊', label:'Review Analysis',     color:'rgba(179,136,255,.12)',border:'rgba(179,136,255,.3)',action:{label:'Go to Analytics', fn:"nav('analytics')"}},
+  outlook:    { icon:'🔭', label:'Market Outlook',      color:'rgba(0,212,255,.12)',  border:'rgba(0,212,255,.35)', action:{label:'Open Outlook',    fn:"nav('outlook')"}},
+  premarket:  { icon:'🌅', label:'Pre-Market Prep',     color:'rgba(255,193,7,.12)',  border:'rgba(255,193,7,.3)', action:{label:'Run Checklist',   fn:"nav('checklist')"}},
+  risk:       { icon:'🛡️', label:'Risk Check',          color:'rgba(255,71,87,.12)',  border:'rgba(255,71,87,.3)', action:{label:'Open Dashboard',  fn:"nav('dashboard')"}},
+  eod:        { icon:'🌙', label:'End-of-Day Review',   color:'rgba(179,136,255,.12)',border:'rgba(179,136,255,.3)',action:{label:'Open Journal',    fn:"nav('trades')"}},
+  custom:     { icon:'✏️', label:'Custom Reminder',     color:'rgba(0,212,255,.08)', border:'rgba(0,212,255,.2)', action:null},
+  'daily-pnl':{ icon:'💰', label:'Daily P&L Alert',     color:'rgba(255,71,87,.12)', border:'rgba(255,71,87,.3)', action:{label:'View Dashboard',  fn:"nav('dashboard')"}},
+  'win-rate': { icon:'📊', label:'Win Rate Warning',    color:'rgba(255,193,7,.12)', border:'rgba(255,193,7,.3)', action:{label:'View Analytics',  fn:"nav('analytics')"}},
+  'consec-loss':{icon:'📉',label:'Consecutive Losses',  color:'rgba(255,71,87,.12)', border:'rgba(255,71,87,.3)', action:{label:'View Trades',     fn:"nav('trades')"}},
+  'emotion-neg':{icon:'😰',label:'Emotional Check-in',  color:'rgba(255,193,7,.12)', border:'rgba(255,193,7,.3)', action:null},
+};
+
+const DAY_MAP = {mon:1,tue:2,wed:3,thu:4,fri:5,sat:6,sun:0};
+
+// ─ Reminder modal state ──────────────────────────────────
+let _rmTypeSelected = 'checklist';
+let _editingReminderId = null;
+
+// Default names and messages keyed by reminder type
+const RM_DEFAULTS = {
+  checklist: { name:'Checklist Reminder',      msg:'Time to run your pre-session checklist before trading!' },
+  journal:   { name:'Journal Your Trades',      msg:"Don't forget to journal today's trades while they're fresh." },
+  analysis:  { name:'Review Your Analytics',    msg:'Take 10 minutes to review your analytics and spot patterns.' },
+  outlook:   { name:'Update Market Outlook',    msg:'Update your market outlook and bias for the current timeframe.' },
+  premarket: { name:'Pre-Market Prep',          msg:'Pre-market starts soon — review news, key levels, and your plan.' },
+  risk:      { name:'Risk Check',               msg:'Risk check: are you within your daily loss limit? Stick to the plan.' },
+  eod:       { name:'End-of-Day Review',        msg:"Market's closed. Time for your end-of-day trade review." },
+  custom:    { name:'Custom Reminder',          msg:'' },
+};
+
+function selectRmType(type) {
+  _rmTypeSelected = type;
+
+  // Sync the dropdown if called programmatically
+  const sel = document.getElementById('rm-type-select');
+  if(sel && sel.value !== type) sel.value = type;
+
+  // Fill name and message with defaults for this type
+  const nameEl = document.getElementById('rm-name');
+  const msgEl  = document.getElementById('rm-message');
+  const def    = RM_DEFAULTS[type] || { name:'Reminder', msg:'' };
+  if(nameEl) nameEl.value = def.name;
+  if(msgEl)  msgEl.value  = def.msg;
+}
+
+function toggleRmDay(el, day) {
+  el.classList.toggle('active');
+  // Brief pulse to confirm the click registered
+  el.style.transform = 'scale(0.88)';
+  setTimeout(() => { el.style.transform = 'scale(1)'; el.style.transition = 'transform .15s'; }, 100);
+  setTimeout(() => { el.style.transform = ''; el.style.transition = ''; }, 250);
+}
+
+function updateRmTrigger() {
+  const trigger = document.getElementById('rm-trigger')?.value;
+  const timeWrap  = document.getElementById('rm-time-wrap');
+  const intvWrap  = document.getElementById('rm-interval-wrap');
+  if(timeWrap)  timeWrap.style.display  = trigger === 'time' ? 'block' : 'none';
+  if(intvWrap)  intvWrap.style.display  = trigger === 'interval' ? 'block' : 'none';
+}
+
+// ─ Open reminder modal ────────────────────────────────────
+function openAlModal(editId) {
+  _editingReminderId = editId || null;
+  const isEdit = !!editId;
+  document.getElementById('al-modal-title').textContent = isEdit ? '✏️ Edit Reminder' : '🔔 New Reminder';
+
+  if(isEdit) {
+    const r = alertRules.find(x => x.id === editId);
+    if(!r) return;
+    // Populate fields from existing reminder
+    _rmTypeSelected = r.type || 'custom';
+    const selEl = document.getElementById('rm-type-select');
+    if(selEl) selEl.value = _rmTypeSelected;
+    const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = v||''; };
+    set('rm-name',    r.name);
+    set('rm-message', r.message);
+    set('rm-trigger', r.trigger || 'time');
+    set('rm-time',    r.time || '09:00');
+    set('rm-interval-val',  r.intervalVal || 2);
+    set('rm-interval-unit', r.intervalUnit || 'hours');
+    // Days
+    document.querySelectorAll('.rm-day-btn').forEach(b => {
+      b.classList.toggle('active', (r.days||['mon','tue','wed','thu','fri']).includes(b.dataset.day));
+    });
+    const setChk = (id, v) => { const el = document.getElementById(id); if(el) el.checked = !!v; };
+    setChk('rm-inapp',   r.inApp !== false);
+    setChk('rm-sound',   r.sound !== false);
+    setChk('rm-browser', r.browser);
+    setChk('rm-email',   r.email);
+    updateRmTrigger();
+  } else {
+    // Reset to defaults
+    _rmTypeSelected = 'checklist';
+    const selElN = document.getElementById('rm-type-select');
+    if(selElN) selElN.value = 'checklist';
+    ['rm-name','rm-message'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('rm-trigger').value = 'time';
+    document.getElementById('rm-time').value = '09:00';
+    document.querySelectorAll('.rm-day-btn').forEach(b => {
+      b.classList.toggle('active', ['mon','tue','wed','thu','fri'].includes(b.dataset.day));
+    });
+    document.getElementById('rm-inapp').checked  = true;
+    document.getElementById('rm-sound').checked  = true;
+    document.getElementById('rm-browser').checked= false;
+    document.getElementById('rm-email').checked  = false;
+    updateRmTrigger();
+    // Fill name/msg defaults for checklist
+    selectRmType('checklist');
+  }
+  document.getElementById('al-modal').classList.add('open');
+}
+
+// ─ Save reminder ─────────────────────────────────────────
+function saveReminder() {
+  const name    = document.getElementById('rm-name')?.value.trim() || 'Reminder';
+  const message = document.getElementById('rm-message')?.value.trim() || '';
+  const trigger = document.getElementById('rm-trigger')?.value || 'time';
+  const time    = document.getElementById('rm-time')?.value || '09:00';
+  const intervalVal  = parseInt(document.getElementById('rm-interval-val')?.value) || 2;
+  const intervalUnit = document.getElementById('rm-interval-unit')?.value || 'hours';
+  const days    = [...document.querySelectorAll('.rm-day-btn.active')].map(b => b.dataset.day);
+  const inApp   = document.getElementById('rm-inapp')?.checked !== false;
+  const sound   = document.getElementById('rm-sound')?.checked !== false;
+  const browser = document.getElementById('rm-browser')?.checked || false;
+  const email   = document.getElementById('rm-email')?.checked || false;
+
+  if(!name) { showNotif('Required', 'Enter a reminder name', 'danger'); return; }
+
+  const reminder = {
+    id: _editingReminderId || Date.now(),
+    type: _rmTypeSelected,
+    name, message, trigger, time, intervalVal, intervalUnit, days,
+    inApp, sound, browser, email,
+    active: true, triggered: false,
+    desc: `${trigger === 'time' ? 'Daily at ' + fmtTime12(time) : trigger === 'interval' ? 'Every ' + intervalVal + ' ' + intervalUnit : trigger.replace(/-/g,' ')}`,
+    at: null, createdAt: new Date().toISOString().slice(0,10),
+  };
+
+  if(_editingReminderId) {
+    const idx = alertRules.findIndex(x => x.id === _editingReminderId);
+    if(idx >= 0) alertRules[idx] = reminder;
+    showNotif('Reminder updated', name, 'success');
+  } else {
+    alertRules.push(reminder);
+    showNotif('Reminder created! 🔔', name + ' — ' + reminder.desc, 'success');
+  }
+
+  closeModal('al-modal');
+  renderAlerts();
+  updateAlDot();
+  saveCurrentUserData();
+  // Request browser notification permission if needed
+  if(browser && Notification.permission === 'default') requestBrowserNotifPermission();
+}
+
+// ─ Legacy saveAlert stub (keep existing P&L alerts working) ──
+// ─ Fire reminder banner ───────────────────────────────────
+// Banner removed — reminders fire via showNotif toast instead
+function fireReminderBanner(reminder) {
+  // Intentionally empty — banner UI removed; handled by showNotif in fireReminder()
+}
+function dismissReminderBanner() {
+  // No-op: banner removed
+}
+
+// ─ Fire a specific reminder ───────────────────────────────
+function fireReminder(reminder) {
+  if(!reminder.active) return;
+
+  // Mark as triggered
+  reminder.triggered = true;
+  reminder.at = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  updateAlDot();
+
+  // In-app notification toast (banner removed; use showNotif instead)
+  if(reminder.inApp !== false) {
+    const meta = RM_TYPES[reminder.type] || RM_TYPES.custom;
+    showNotif(
+      meta.icon + ' ' + reminder.name,
+      reminder.message || meta.label,
+      'info'
+    );
+  }
+
+  // Sound
+  if(reminder.sound !== false) {
+    playReminderChime();
+  }
+
+  // Browser notification
+  if(reminder.browser && Notification.permission === 'granted') {
+    try {
+      const n = new Notification('TradeEdge Pro — ' + reminder.name, {
+        body: reminder.message || (RM_TYPES[reminder.type]?.label || 'Reminder'),
+        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📈</text></svg>',
+        tag: 'tradeedge-reminder-' + reminder.id,
+      });
+      n.onclick = () => { window.focus(); n.close(); };
+      setTimeout(() => n.close(), 15000);
+    } catch(e) { console.warn('Browser notification failed:', e); }
+  }
+
+  // Email reminder (show info — actual sending requires backend)
+  if(reminder.email) {
+    const emailAddr = appSettings.email || '';
+    if(emailAddr) {
+      showNotif('📧 Email reminder', `Would send to ${emailAddr} — email delivery requires a backend server`, 'info');
+    } else {
+      showNotif('No email set', 'Add your email in Settings → Account to use email reminders', 'warn');
+    }
+  }
+}
+
+// ─ Manual test fire ───────────────────────────────────────
+function fireReminderNow(id) {
+  const r = alertRules.find(x => x.id === id);
+  if(!r) return;
+  const saved = {triggered: r.triggered, at: r.at};
+  fireReminder(r);
+  // Don't permanently mark as triggered for manual test
+  setTimeout(() => { r.triggered = saved.triggered; r.at = saved.at; renderAlerts(); updateAlDot(); }, 100);
+  showNotif('Test fired 🔔', r.name + ' — reminder preview', 'info');
+}
+
+// ─ Chime sound (Web Audio API) ────────────────────────────
+function playReminderChime() {
+  try {
+    const ctx = new(window.AudioContext || window.webkitAudioContext)();
+    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+    notes.forEach((freq, i) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const t = ctx.currentTime + i * 0.18;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.25, t + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+      osc.start(t); osc.stop(t + 0.5);
+    });
+  } catch(e) { /* Audio not available */ }
+}
+
+// ─ Scheduler ─────────────────────────────────────────────
+let _reminderScheduler = null;
+let _reminderIntervalCounters = {}; // track interval firing
+
+function startReminderScheduler() {
+  if(_reminderScheduler) clearInterval(_reminderScheduler);
+  _reminderScheduler = setInterval(checkReminders, 60000); // check every minute
+  checkReminders(); // run immediately on start
+}
+
+function stopReminderScheduler() {
+  if(_reminderScheduler) clearInterval(_reminderScheduler);
+  _reminderScheduler = null;
+}
+
+function checkReminders() {
+  if(!currentUser) return;
+  const now   = new Date();
+  const hh    = now.getHours();
+  const mm    = now.getMinutes();
+  const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][now.getDay()];
+  const timeStr = String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+
+  alertRules.forEach(r => {
+    if(!r.active || r.type === 'daily-pnl' || r.type === 'win-rate' || r.type === 'consec-loss') return; // old-style alerts handled elsewhere
+
+    // Check active days
+    const activeDays = r.days?.length ? r.days : ['mon','tue','wed','thu','fri'];
+    if(!activeDays.includes(dayKey)) return;
+
+    let shouldFire = false;
+
+    switch(r.trigger) {
+      case 'time':
+        shouldFire = timeStr === (r.time || '09:00');
+        break;
+      case 'market-open':
+        shouldFire = hh === 9 && mm === 30;
+        break;
+      case 'market-close':
+        shouldFire = hh === 16 && mm === 0;
+        break;
+      case 'premarket':
+        shouldFire = hh === 8 && mm === 0;
+        break;
+      case 'interval': {
+        const mins = (r.intervalUnit === 'hours' ? (r.intervalVal||2)*60 : (r.intervalVal||30));
+        const key = 'r_' + r.id;
+        _reminderIntervalCounters[key] = (_reminderIntervalCounters[key] || 0) + 1;
+        shouldFire = _reminderIntervalCounters[key] >= mins;
+        if(shouldFire) _reminderIntervalCounters[key] = 0;
+        break;
+      }
+      case 'manual':
+        shouldFire = false;
+        break;
+    }
+
+    if(shouldFire) {
+      fireReminder(r);
+      // Auto-reset triggered after 1 minute so it can fire again next day
+      setTimeout(() => {
+        r.triggered = false;
+        updateAlDot();
+        renderAlerts();
+      }, 60000);
+    }
+  });
+}
+
+// ─ Browser notification permission ────────────────────────
+function requestBrowserNotifPermission() {
+  if(!('Notification' in window)) {
+    showNotif('Not supported', 'This browser does not support notifications', 'warn'); return;
+  }
+  Notification.requestPermission().then(result => {
+    if(result === 'granted') {
+      showNotif('Notifications enabled! 📲', 'You will receive browser alerts when reminders fire', 'success');
+      renderAlerts();
+    } else {
+      showNotif('Permission denied', 'Enable notifications in your browser settings', 'warn');
+    }
+  });
+}
+
+// ─ Helpers ────────────────────────────────────────────────
+function fmtTime12(t) {
+  if(!t) return '';
+  const [hh, mm] = t.split(':').map(Number);
+  const ampm = hh >= 12 ? 'PM' : 'AM';
+  const h12  = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh;
+  return h12 + ':' + String(mm).padStart(2,'0') + ' ' + ampm;
+}
+
 
 function showNotif(title,msg,type='info'){const stack=document.getElementById('notif-stack');if(!stack)return;const id='n'+nid++;const tc={info:'',danger:'nd',success:'ns',warn:'nw'};const div=document.createElement('div');div.className=`notif ${tc[type]||''}`;div.id=id;div.innerHTML=`<div style="flex:1"><div style="font-size:12px;font-weight:600;margin-bottom:2px">${title}</div>${msg?`<div style="font-size:11px;color:var(--text2);line-height:1.4">${msg}</div>`:''}</div><div style="color:var(--text3);font-size:14px;cursor:pointer;flex-shrink:0" onclick="document.getElementById('${id}').remove()">×</div>`;stack.appendChild(div);setTimeout(()=>{const e=document.getElementById(id);if(e){e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(()=>{const x=document.getElementById(id);if(x)x.remove();},300);}},6000);}
 
