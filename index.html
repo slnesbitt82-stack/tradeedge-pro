@@ -3984,36 +3984,15 @@ tr:hover td{background:rgba(255,255,255,.015)}
             <button type="button" onclick="setWeekdays()"     style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--bdr2);background:var(--bg4);color:var(--text2);cursor:pointer">Weekdays</button>
           </div>
         </div>
-        <!-- Dial-style day selector -->
+        <!-- Day selector — plain buttons, no child elements to intercept clicks -->
         <div id="rm-days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
-          <div onclick="toggleRmDay(this,'mon')" class="rm-day-btn active" data-day="mon">
-            <div class="rm-day-letter">M</div>
-            <div class="rm-day-label">Mon</div>
-          </div>
-          <div onclick="toggleRmDay(this,'tue')" class="rm-day-btn active" data-day="tue">
-            <div class="rm-day-letter">T</div>
-            <div class="rm-day-label">Tue</div>
-          </div>
-          <div onclick="toggleRmDay(this,'wed')" class="rm-day-btn active" data-day="wed">
-            <div class="rm-day-letter">W</div>
-            <div class="rm-day-label">Wed</div>
-          </div>
-          <div onclick="toggleRmDay(this,'thu')" class="rm-day-btn active" data-day="thu">
-            <div class="rm-day-letter">T</div>
-            <div class="rm-day-label">Thu</div>
-          </div>
-          <div onclick="toggleRmDay(this,'fri')" class="rm-day-btn active" data-day="fri">
-            <div class="rm-day-letter">F</div>
-            <div class="rm-day-label">Fri</div>
-          </div>
-          <div onclick="toggleRmDay(this,'sat')" class="rm-day-btn" data-day="sat">
-            <div class="rm-day-letter">S</div>
-            <div class="rm-day-label">Sat</div>
-          </div>
-          <div onclick="toggleRmDay(this,'sun')" class="rm-day-btn" data-day="sun">
-            <div class="rm-day-letter">S</div>
-            <div class="rm-day-label">Sun</div>
-          </div>
+          <button type="button" onclick="toggleRmDay(this)" class="rm-day-btn active" data-day="mon">M<br><span>Mon</span></button>
+          <button type="button" onclick="toggleRmDay(this)" class="rm-day-btn active" data-day="tue">T<br><span>Tue</span></button>
+          <button type="button" onclick="toggleRmDay(this)" class="rm-day-btn active" data-day="wed">W<br><span>Wed</span></button>
+          <button type="button" onclick="toggleRmDay(this)" class="rm-day-btn active" data-day="thu">T<br><span>Thu</span></button>
+          <button type="button" onclick="toggleRmDay(this)" class="rm-day-btn active" data-day="fri">F<br><span>Fri</span></button>
+          <button type="button" onclick="toggleRmDay(this)" class="rm-day-btn" data-day="sat">S<br><span>Sat</span></button>
+          <button type="button" onclick="toggleRmDay(this)" class="rm-day-btn" data-day="sun">S<br><span>Sun</span></button>
         </div>
       </div>
     </div>
@@ -4044,6 +4023,20 @@ tr:hover td{background:rgba(255,255,255,.015)}
     </div>
   </div>
 </div>
+
+  <!-- ── In-App Confirm Dialog ── -->
+  <div class="modal-bg" id="confirm-modal" style="z-index:2000">
+    <div class="modal" style="max-width:380px;padding:28px 24px">
+      <div class="modal-handle"></div>
+      <div style="font-size:18px;text-align:center;margin-bottom:10px" id="confirm-icon">⚠️</div>
+      <div style="font-family:var(--head);font-size:15px;font-weight:700;text-align:center;margin-bottom:8px" id="confirm-title">Are you sure?</div>
+      <div style="font-size:13px;color:var(--text2);text-align:center;line-height:1.6;margin-bottom:22px" id="confirm-msg"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-g" style="flex:1;justify-content:center" onclick="confirmCancel()">Cancel</button>
+        <button class="btn" id="confirm-ok-btn" style="flex:1;justify-content:center" onclick="confirmOK()">Confirm</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Calendar Log Modal -->
   <div class="modal-bg" id="cal-modal">
@@ -6189,41 +6182,64 @@ function togAlert(id){const a=alertRules.find(x=>x.id===id);if(a)a.active=!a.act
 
 function rmAlert(id) {
   const item = alertRules.find(a => a.id === id);
-  const label = item ? `"${item.name}"` : 'this item';
-  if(!confirm(`Delete ${label}?`)) return;
-  alertRules = alertRules.filter(a => a.id !== id);
-  renderAlerts(); updateAlDot(); saveCurrentUserData();
-  showNotif('Deleted', label + ' removed', 'info');
+  if(!item) return;
+  showConfirm(
+    '🗑️ Delete?',
+    'Delete "' + item.name + '"? This cannot be undone.',
+    'var(--red)',
+    function() {
+      const kept = alertRules.filter(a => a.id !== id);
+      alertRules.splice(0, alertRules.length, ...kept);
+      renderAlerts(); updateAlDot(); saveCurrentUserData();
+      showNotif('Deleted', '"' + item.name + '" removed', 'info');
+    }
+  );
 }
 
 function clearAllAlerts() {
   const count = alertRules.filter(a => ALERT_TYPES.has(a.type) || a.kind === 'alert').length;
   if(!count) { showNotif('Nothing to clear', 'No trading alerts exist', 'info'); return; }
-  if(!confirm(`Delete all ${count} trading alert${count !== 1 ? 's' : ''}? This cannot be undone.`)) return;
-  alertRules = alertRules.filter(a => !ALERT_TYPES.has(a.type) && a.kind !== 'alert');
-  renderAlerts(); updateAlDot(); saveCurrentUserData();
-  showNotif('Cleared ⚡', `${count} trading alert${count !== 1 ? 's' : ''} deleted`, 'info');
+  showConfirm(
+    '⚡ Clear All Alerts?',
+    'Delete all ' + count + ' trading alert' + (count !== 1 ? 's' : '') + '? This cannot be undone.',
+    'var(--red)',
+    function() {
+      const kept = alertRules.filter(a => !ALERT_TYPES.has(a.type) && a.kind !== 'alert');
+      alertRules.splice(0, alertRules.length, ...kept);
+      renderAlerts(); updateAlDot(); saveCurrentUserData();
+      showNotif('Cleared', count + ' alert' + (count !== 1 ? 's' : '') + ' deleted', 'info');
+    }
+  );
 }
 
 function clearAllReminders() {
   const count = alertRules.filter(a => !ALERT_TYPES.has(a.type) && a.kind !== 'alert').length;
   if(!count) { showNotif('Nothing to clear', 'No reminders exist', 'info'); return; }
-  if(!confirm(`Delete all ${count} reminder${count !== 1 ? 's' : ''}? This cannot be undone.`)) return;
-  alertRules = alertRules.filter(a => ALERT_TYPES.has(a.type) || a.kind === 'alert');
-  renderAlerts(); updateAlDot(); saveCurrentUserData();
-  showNotif('Cleared 🔔', `${count} reminder${count !== 1 ? 's' : ''} deleted`, 'info');
+  showConfirm(
+    '🔔 Clear All Reminders?',
+    'Delete all ' + count + ' reminder' + (count !== 1 ? 's' : '') + '? This cannot be undone.',
+    'var(--red)',
+    function() {
+      const kept = alertRules.filter(a => ALERT_TYPES.has(a.type) || a.kind === 'alert');
+      alertRules.splice(0, alertRules.length, ...kept);
+      renderAlerts(); updateAlDot(); saveCurrentUserData();
+      showNotif('Cleared', count + ' reminder' + (count !== 1 ? 's' : '') + ' deleted', 'info');
+    }
+  );
 }
 
 // ── Day selector helpers ──────────────────────────────────
 function setAllDays(active) {
   document.querySelectorAll('#rm-days .rm-day-btn').forEach(b => {
-    b.classList.toggle('active', active);
+    if(active) b.classList.add('active');
+    else b.classList.remove('active');
   });
 }
 function setWeekdays() {
   const weekdays = ['mon','tue','wed','thu','fri'];
   document.querySelectorAll('#rm-days .rm-day-btn').forEach(b => {
-    b.classList.toggle('active', weekdays.includes(b.dataset.day));
+    if(weekdays.includes(b.dataset.day)) b.classList.add('active');
+    else b.classList.remove('active');
   });
 }
 // openAlModal defined below in reminder system
@@ -9045,50 +9061,37 @@ function enterApp() {
 
 // ── Logout ──
 function doLogout() {
-  // Save current state immediately before any prompt
+  // Save current state before showing dialog
   if(currentUser) {
     try {
       const snap = snapshotUserData();
-      saveUserData(currentUser.username, {
-        ...loadUserData(currentUser.username),
-        ...snap
-      });
+      saveUserData(currentUser.username, {...loadUserData(currentUser.username), ...snap});
     } catch(e) { console.warn('Auto-save on logout failed:', e); }
   }
-
-  if(!confirm('Sign out of TradeEdge Pro?\nYour data has been saved.')) return;
-
-  sessionStorage.removeItem('te_current_user');
-  stopAutoSave();
-  currentUser = null;
-  closeUserMenu();
-
-  // Hide the app shell and reveal the auth screen
-  const appEl = document.querySelector('.app');
-  if(appEl) appEl.style.visibility = 'hidden';
-
-  showAuthPanel('login');
-  const authEl = document.getElementById('auth-screen');
-  if(authEl) authEl.classList.remove('hidden');
-
-  // Restore app visibility once auth screen is shown (it sits on top via z-index)
-  if(appEl) appEl.style.visibility = '';
-
-  // Clear all auth form fields and errors
-  ['login-user','login-pass','reg-user','reg-pass','reg-pass2'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.value = '';
-  });
-  ['login-err','reg-err','reg-success'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.style.display = 'none';
-  });
-
-  // Focus the username field for quick sign-in
-  setTimeout(() => {
-    const uField = document.getElementById('login-user');
-    if(uField) uField.focus();
-  }, 150);
+  showConfirm(
+    '⏻ Sign Out?',
+    'Your data has been saved. Sign out of TradeEdge Pro?',
+    'var(--cyan)',
+    function() {
+      sessionStorage.removeItem('te_current_user');
+      stopAutoSave();
+      currentUser = null;
+      closeUserMenu();
+      const appEl = document.querySelector('.app');
+      if(appEl) appEl.style.visibility = 'hidden';
+      showAuthPanel('login');
+      const authEl = document.getElementById('auth-screen');
+      if(authEl) authEl.classList.remove('hidden');
+      if(appEl) appEl.style.visibility = '';
+      ['login-user','login-pass','reg-user','reg-pass','reg-pass2'].forEach(id => {
+        const el = document.getElementById(id); if(el) el.value = '';
+      });
+      ['login-err','reg-err','reg-success'].forEach(id => {
+        const el = document.getElementById(id); if(el) el.style.display = 'none';
+      });
+      setTimeout(() => { document.getElementById('login-user')?.focus(); }, 150);
+    }
+  );
 }
 
 
@@ -11034,28 +11037,22 @@ function exportOutlookPDF() {
 }
 .rm-type-chip.sel::before{content:'✓ ';font-size:10px}
 .rm-day-btn{
-  border-radius:9px;cursor:pointer;border:2px solid var(--bdr);
-  background:var(--bg3);text-align:center;padding:7px 2px 6px;
+  border-radius:9px;cursor:pointer;border:2px solid var(--bdr2);
+  background:var(--bg3);text-align:center;padding:8px 2px 6px;
   transition:all .18s;user-select:none;-webkit-tap-highlight-color:transparent;
-  opacity:.5;
+  opacity:.45;font-size:15px;font-weight:800;color:var(--text3);
+  line-height:1.2;font-family:var(--font);
 }
-.rm-day-letter{
-  font-size:14px;font-weight:800;color:var(--text3);
-  line-height:1;margin-bottom:3px;
-}
-.rm-day-label{
-  font-size:9px;font-weight:600;color:var(--text3);
-  letter-spacing:.2px;text-transform:uppercase;
-}
-.rm-day-btn:hover{opacity:.8;border-color:rgba(0,212,255,.4)}
-.rm-day-btn:hover .rm-day-letter,.rm-day-btn:hover .rm-day-label{color:var(--text2)}
+.rm-day-btn span{display:block;font-size:9px;font-weight:600;
+  letter-spacing:.2px;text-transform:uppercase;margin-top:3px;color:var(--text3);}
+.rm-day-btn:hover{opacity:.8;border-color:rgba(0,212,255,.5);color:var(--text2);}
+.rm-day-btn:hover span{color:var(--text2);}
 .rm-day-btn.active{
   background:var(--cyan);border-color:var(--cyan);
+  color:#000;opacity:1;
   box-shadow:0 2px 10px rgba(0,212,255,.4);
-  opacity:1;
 }
-.rm-day-btn.active .rm-day-letter{color:#000;font-size:15px;}
-.rm-day-btn.active .rm-day-label{color:rgba(0,0,0,.7);}
+.rm-day-btn.active span{color:rgba(0,0,0,.75);}
 
 /* reminder banner removed */
 
@@ -11278,12 +11275,10 @@ function selectRmType(type) {
   if(msgEl)  msgEl.value  = def.msg;
 }
 
-function toggleRmDay(el, day) {
+function toggleRmDay(el) {
   el.classList.toggle('active');
-  // Brief pulse to confirm the click registered
   el.style.transform = 'scale(0.88)';
-  setTimeout(() => { el.style.transform = 'scale(1)'; el.style.transition = 'transform .15s'; }, 100);
-  setTimeout(() => { el.style.transform = ''; el.style.transition = ''; }, 250);
+  setTimeout(() => { el.style.transform = ''; }, 150);
 }
 
 function updateRmTrigger() {
@@ -11315,8 +11310,10 @@ function openAlModal(editId) {
     set('rm-interval-val',  r.intervalVal || 2);
     set('rm-interval-unit', r.intervalUnit || 'hours');
     // Days
-    document.querySelectorAll('.rm-day-btn').forEach(b => {
-      b.classList.toggle('active', (r.days||['mon','tue','wed','thu','fri']).includes(b.dataset.day));
+    const activeDays = r.days || ['mon','tue','wed','thu','fri'];
+    document.querySelectorAll('#rm-days .rm-day-btn').forEach(b => {
+      if(activeDays.includes(b.dataset.day)) b.classList.add('active');
+      else b.classList.remove('active');
     });
     const setChk = (id, v) => { const el = document.getElementById(id); if(el) el.checked = !!v; };
     setChk('rm-inapp',   r.inApp !== false);
@@ -11332,8 +11329,9 @@ function openAlModal(editId) {
     ['rm-name','rm-message'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     document.getElementById('rm-trigger').value = 'time';
     document.getElementById('rm-time').value = '09:00';
-    document.querySelectorAll('.rm-day-btn').forEach(b => {
-      b.classList.toggle('active', ['mon','tue','wed','thu','fri'].includes(b.dataset.day));
+    document.querySelectorAll('#rm-days .rm-day-btn').forEach(b => {
+      if(['mon','tue','wed','thu','fri'].includes(b.dataset.day)) b.classList.add('active');
+      else b.classList.remove('active');
     });
     document.getElementById('rm-inapp').checked  = true;
     document.getElementById('rm-sound').checked  = true;
@@ -11572,6 +11570,41 @@ function fmtTime12(t) {
   return h12 + ':' + String(mm).padStart(2,'0') + ' ' + ampm;
 }
 
+
+
+// ── In-app confirmation dialog (replaces browser confirm()) ──
+let _confirmCallback = null;
+
+function showConfirm(title, msg, okColor, callback) {
+  _confirmCallback = callback;
+  const icon = document.getElementById('confirm-icon');
+  const titleEl = document.getElementById('confirm-title');
+  const msgEl = document.getElementById('confirm-msg');
+  const okBtn = document.getElementById('confirm-ok-btn');
+  if(icon)    icon.textContent   = title.split(' ')[0]; // first word is emoji
+  if(titleEl) titleEl.textContent= title.replace(/^\S+\s*/, ''); // rest is title
+  if(msgEl)   msgEl.textContent  = msg;
+  if(okBtn) {
+    okBtn.style.background = okColor || 'var(--cyan)';
+    okBtn.style.color = (okColor === 'var(--red)') ? '#fff' : '#000';
+    okBtn.style.border = '1px solid ' + (okColor || 'var(--cyan)');
+    okBtn.textContent = 'Confirm';
+  }
+  document.getElementById('confirm-modal').classList.add('open');
+}
+
+function confirmOK() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  if(typeof _confirmCallback === 'function') {
+    _confirmCallback();
+    _confirmCallback = null;
+  }
+}
+
+function confirmCancel() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  _confirmCallback = null;
+}
 
 function showNotif(title,msg,type='info'){const stack=document.getElementById('notif-stack');if(!stack)return;const id='n'+nid++;const tc={info:'',danger:'nd',success:'ns',warn:'nw'};const div=document.createElement('div');div.className=`notif ${tc[type]||''}`;div.id=id;div.innerHTML=`<div style="flex:1"><div style="font-size:12px;font-weight:600;margin-bottom:2px">${title}</div>${msg?`<div style="font-size:11px;color:var(--text2);line-height:1.4">${msg}</div>`:''}</div><div style="color:var(--text3);font-size:14px;cursor:pointer;flex-shrink:0" onclick="document.getElementById('${id}').remove()">×</div>`;stack.appendChild(div);setTimeout(()=>{const e=document.getElementById(id);if(e){e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(()=>{const x=document.getElementById(id);if(x)x.remove();},300);}},6000);}
 
