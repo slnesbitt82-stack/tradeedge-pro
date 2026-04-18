@@ -3974,27 +3974,6 @@ tr:hover td{background:rgba(255,255,255,.015)}
         </div>
       </div>
 
-      <!-- Days of week — dial selector -->
-      <div class="fg" style="margin-bottom:0">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <label style="margin-bottom:0">Active Days</label>
-          <div style="display:flex;gap:4px">
-            <button type="button" onclick="setAllDays(true)"  style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--bdr2);background:var(--bg4);color:var(--text2);cursor:pointer">All</button>
-            <button type="button" onclick="setAllDays(false)" style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--bdr2);background:var(--bg4);color:var(--text2);cursor:pointer">None</button>
-            <button type="button" onclick="setWeekdays()"     style="font-size:10px;padding:2px 8px;border-radius:5px;border:1px solid var(--bdr2);background:var(--bg4);color:var(--text2);cursor:pointer">Weekdays</button>
-          </div>
-        </div>
-        <!-- Day selector: div-based for full CSS control, event delegation on container -->
-        <div id="rm-days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px" onclick="rmDayContainerClick(event)">
-          <div class="rm-day-btn active" data-day="mon" role="button" tabindex="0"><div class="rdb-letter">M</div><div class="rdb-label">Mon</div></div>
-          <div class="rm-day-btn active" data-day="tue" role="button" tabindex="0"><div class="rdb-letter">T</div><div class="rdb-label">Tue</div></div>
-          <div class="rm-day-btn active" data-day="wed" role="button" tabindex="0"><div class="rdb-letter">W</div><div class="rdb-label">Wed</div></div>
-          <div class="rm-day-btn active" data-day="thu" role="button" tabindex="0"><div class="rdb-letter">T</div><div class="rdb-label">Thu</div></div>
-          <div class="rm-day-btn active" data-day="fri" role="button" tabindex="0"><div class="rdb-letter">F</div><div class="rdb-label">Fri</div></div>
-          <div class="rm-day-btn" data-day="sat" role="button" tabindex="0"><div class="rdb-letter">S</div><div class="rdb-label">Sat</div></div>
-          <div class="rm-day-btn" data-day="sun" role="button" tabindex="0"><div class="rdb-letter">S</div><div class="rdb-label">Sun</div></div>
-        </div>
-      </div>
     </div>
 
     <!-- Notification options -->
@@ -6229,19 +6208,7 @@ function clearAllReminders() {
 }
 
 // ── Day selector helpers ──────────────────────────────────
-function setAllDays(active) {
-  document.querySelectorAll('#rm-days .rm-day-btn').forEach(function(b) {
-    if(active) { b.classList.add('active'); }
-    else       { b.classList.remove('active'); }
-  });
-}
-function setWeekdays() {
-  var wd = ['mon','tue','wed','thu','fri'];
-  document.querySelectorAll('#rm-days .rm-day-btn').forEach(function(b) {
-    if(wd.indexOf(b.getAttribute('data-day')) >= 0) { b.classList.add('active'); }
-    else { b.classList.remove('active'); }
-  });
-}
+
 // openAlModal defined below in reminder system
 
 
@@ -11036,37 +11003,7 @@ function exportOutlookPDF() {
   box-shadow:0 0 0 1px rgba(0,212,255,.2);
 }
 .rm-type-chip.sel::before{content:'✓ ';font-size:10px}
-/* ── Active-Days selector ── */
-.rm-day-btn{
-  border-radius:10px;cursor:pointer;
-  border:2px solid rgba(255,255,255,.1);
-  background:rgba(255,255,255,.04);
-  text-align:center;padding:10px 4px 7px;
-  transition:background .15s,border-color .15s,box-shadow .15s;
-  user-select:none;-webkit-tap-highlight-color:transparent;
-}
-.rdb-letter{
-  font-size:16px;font-weight:800;
-  color:rgba(255,255,255,.3);
-  line-height:1;margin-bottom:4px;
-  pointer-events:none;
-}
-.rdb-label{
-  font-size:9px;font-weight:700;
-  color:rgba(255,255,255,.25);
-  letter-spacing:.3px;text-transform:uppercase;
-  pointer-events:none;
-}
-.rm-day-btn:hover .rdb-letter{color:rgba(255,255,255,.65);}
-.rm-day-btn:hover .rdb-label{color:rgba(255,255,255,.5);}
-.rm-day-btn:hover{border-color:rgba(0,212,255,.4);background:rgba(0,212,255,.06);}
-.rm-day-btn.active{
-  background:#00d4ff !important;
-  border-color:#00d4ff !important;
-  box-shadow:0 2px 12px rgba(0,212,255,.5) !important;
-}
-.rm-day-btn.active .rdb-letter{color:#000 !important;font-size:17px;}
-.rm-day-btn.active .rdb-label{color:rgba(0,0,0,.7) !important;}
+
 
 /* reminder banner removed */
 
@@ -11289,22 +11226,7 @@ function selectRmType(type) {
   if(msgEl)  msgEl.value  = def.msg;
 }
 
-// Event delegation: one handler on the #rm-days container
-function rmDayContainerClick(e) {
-  // Walk up from click target to find the .rm-day-btn
-  let el = e.target;
-  while(el && el.id !== 'rm-days') {
-    if(el.classList && el.classList.contains('rm-day-btn')) {
-      el.classList.toggle('active');
-      return;
-    }
-    el = el.parentElement;
-  }
-}
-// Kept for backward compat (setAllDays/setWeekdays call nothing directly)
-function toggleRmDay(el) {
-  if(el && el.classList) el.classList.toggle('active');
-}
+
 
 function updateRmTrigger() {
   const trigger = document.getElementById('rm-trigger')?.value;
@@ -11335,12 +11257,7 @@ function openAlModal(editId) {
     set('rm-interval-val',  r.intervalVal || 2);
     set('rm-interval-unit', r.intervalUnit || 'hours');
     // Days
-    var activeDays = r.days || ['mon','tue','wed','thu','fri'];
-    document.querySelectorAll('#rm-days .rm-day-btn').forEach(function(b) {
-      var d = b.getAttribute('data-day');
-      if(activeDays.indexOf(d) >= 0) { b.classList.add('active'); }
-      else { b.classList.remove('active'); }
-    });
+
     const setChk = (id, v) => { const el = document.getElementById(id); if(el) el.checked = !!v; };
     setChk('rm-inapp',   r.inApp !== false);
     setChk('rm-sound',   r.sound !== false);
@@ -11355,11 +11272,7 @@ function openAlModal(editId) {
     ['rm-name','rm-message'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
     document.getElementById('rm-trigger').value = 'time';
     document.getElementById('rm-time').value = '09:00';
-    document.querySelectorAll('#rm-days .rm-day-btn').forEach(function(b) {
-      var d = b.getAttribute('data-day');
-      if(['mon','tue','wed','thu','fri'].indexOf(d) >= 0) { b.classList.add('active'); }
-      else { b.classList.remove('active'); }
-    });
+
     document.getElementById('rm-inapp').checked  = true;
     document.getElementById('rm-sound').checked  = true;
     document.getElementById('rm-browser').checked= false;
@@ -11379,7 +11292,7 @@ function saveReminder() {
   const time    = document.getElementById('rm-time')?.value || '09:00';
   const intervalVal  = parseInt(document.getElementById('rm-interval-val')?.value) || 2;
   const intervalUnit = document.getElementById('rm-interval-unit')?.value || 'hours';
-  const days    = Array.from(document.querySelectorAll('#rm-days .rm-day-btn.active')).map(function(b){return b.getAttribute('data-day');});
+  const days    = ['mon','tue','wed','thu','fri']; // default weekdays (Active Days selector removed)
   const inApp   = document.getElementById('rm-inapp')?.checked !== false;
   const sound   = document.getElementById('rm-sound')?.checked !== false;
   const browser = document.getElementById('rm-browser')?.checked || false;
