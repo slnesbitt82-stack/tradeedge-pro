@@ -1199,8 +1199,16 @@ tr:hover td{background:rgba(255,255,255,.015)}
             onmouseout="this.style.background='transparent';this.style.color='var(--text2)';this.style.transform='rotate(0deg)'">⚙️</button>
           <div class="h-clock" id="hclock">00:00:00</div>
           <div class="h-date" id="hdate">—</div>
-          <div class="h-greet" id="hgreet">Good morning, Trader.</div>
-          <div class="h-sub" id="h-sub">Ready to execute with discipline and precision. Your edge is consistency — one trade at a time.</div>
+          <div style="display:flex;align-items:flex-start;gap:8px">
+            <div style="flex:1">
+              <div class="h-greet" id="hgreet">Good morning, Trader.</div>
+              <div class="h-sub" id="h-sub">Ready to execute with discipline and precision. Your edge is consistency — one trade at a time.</div>
+            </div>
+            <button onclick="openGreetingEdit()" title="Edit greeting"
+              style="margin-top:4px;flex-shrink:0;background:transparent;border:1px solid var(--bdr2);color:var(--text3);border-radius:7px;padding:5px 9px;font-size:12px;cursor:pointer;transition:all .15s;font-family:var(--font)"
+              onmouseover="this.style.borderColor='var(--cyan)';this.style.color='var(--cyan)'"
+              onmouseout="this.style.borderColor='var(--bdr2)';this.style.color='var(--text3)'">✎</button>
+          </div>
           <div class="aff-card">
             <div class="aff-lbl">Today's Affirmation</div>
             <div class="aff-txt" id="aff-txt"></div>
@@ -1246,7 +1254,8 @@ tr:hover td{background:rgba(255,255,255,.015)}
               <button class="btn btn-c btn-sm" onclick="saveOutlook()">💾 Save</button>
               <button class="btn btn-g btn-sm" onclick="exportOutlook('pdf')" title="Download as PDF">📄 PDF</button>
               <button class="btn btn-g btn-sm" onclick="exportOutlook('csv')" title="Download as CSV">📊 CSV</button>
-              <button class="btn btn-g btn-sm" onclick="clearOutlook()">↺ Clear All</button>
+              <button class="btn btn-g btn-sm" onclick="clearOutlookTab()" title="Reset current timeframe tab">↺ Reset Tab</button>
+              <button class="btn btn-g btn-sm" onclick="clearOutlook()" title="Reset all three timeframes" style="color:var(--red);border-color:rgba(255,71,87,.3)">↺ Clear All</button>
             </div>
           </div>
 
@@ -1255,10 +1264,20 @@ tr:hover td{background:rgba(255,255,255,.015)}
             <div class="tab active" style="flex:1;text-align:center;border-radius:8px" onclick="outlookTab('daily',this)" id="ot-daily">📅 Daily</div>
             <div class="tab" style="flex:1;text-align:center;border-radius:8px" onclick="outlookTab('weekly',this)" id="ot-weekly">📆 Weekly</div>
             <div class="tab" style="flex:1;text-align:center;border-radius:8px" onclick="outlookTab('monthly',this)" id="ot-monthly">🗓 Monthly</div>
+            <div class="tab" style="flex:1;text-align:center;border-radius:8px" onclick="outlookTab('history',this)" id="ot-history">📚 History</div>
           </div>
 
           <!-- ── DAILY ── -->
           <div id="op-daily">
+
+            <!-- Daily reminder strip -->
+            <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:10px 14px;margin-bottom:14px;gap:10px;flex-wrap:wrap">
+              <div style="font-size:12px;color:var(--text2)">
+                🔔 <span id="outlook-reminder-status-daily">No reminder set for Daily Outlook</span>
+              </div>
+              <button class="btn btn-c btn-sm" onclick="openOutlookReminder('daily')">+ Set Reminder</button>
+            </div>
+
             <div class="g2" style="margin-bottom:14px">
 
               <!-- Bias card -->
@@ -1366,6 +1385,15 @@ tr:hover td{background:rgba(255,255,255,.015)}
 
           <!-- ── WEEKLY ── -->
           <div id="op-weekly" style="display:none">
+
+            <!-- Weekly reminder strip -->
+            <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:10px 14px;margin-bottom:14px;gap:10px;flex-wrap:wrap">
+              <div style="font-size:12px;color:var(--text2)">
+                🔔 <span id="outlook-reminder-status-weekly">No reminder set for Weekly Outlook</span>
+              </div>
+              <button class="btn btn-c btn-sm" onclick="openOutlookReminder('weekly')">+ Set Reminder</button>
+            </div>
+
             <div class="g2" style="margin-bottom:14px">
               <div class="card" style="margin-bottom:0">
                 <div class="sec">Weekly Bias</div>
@@ -1462,6 +1490,15 @@ tr:hover td{background:rgba(255,255,255,.015)}
 
           <!-- ── MONTHLY ── -->
           <div id="op-monthly" style="display:none">
+
+            <!-- Monthly reminder strip -->
+            <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);border-radius:10px;padding:10px 14px;margin-bottom:14px;gap:10px;flex-wrap:wrap">
+              <div style="font-size:12px;color:var(--text2)">
+                🔔 <span id="outlook-reminder-status-monthly">No reminder set for Monthly Outlook</span>
+              </div>
+              <button class="btn btn-c btn-sm" onclick="openOutlookReminder('monthly')">+ Set Reminder</button>
+            </div>
+
             <div class="g2" style="margin-bottom:14px">
               <div class="card" style="margin-bottom:0">
                 <div class="sec">Monthly Bias</div>
@@ -1562,6 +1599,29 @@ tr:hover td{background:rgba(255,255,255,.015)}
 
           <!-- Last saved indicator -->
           <div style="text-align:right;font-size:11px;color:var(--text3);margin-top:10px" id="outlook-saved-at"></div>
+
+          <!-- ── HISTORY PANEL ── -->
+          <div id="op-history" style="display:none">
+            <div class="card" style="margin-bottom:14px">
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+                <div>
+                  <div style="font-size:14px;font-weight:700">📚 Outlook History</div>
+                  <div style="font-size:11px;color:var(--text2);margin-top:2px">Saved snapshots of your Daily, Weekly, and Monthly analysis</div>
+                </div>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                  <select id="history-tf-filter" onchange="renderOutlookHistory()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--bdr2);background:var(--bg3);color:var(--text)">
+                    <option value="all">All Timeframes</option>
+                    <option value="daily">📅 Daily only</option>
+                    <option value="weekly">📆 Weekly only</option>
+                    <option value="monthly">🗓 Monthly only</option>
+                  </select>
+                  <input type="month" id="history-month-filter" onchange="renderOutlookHistory()" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--bdr2);background:var(--bg3);color:var(--text)">
+                  <button class="btn btn-g btn-sm" onclick="clearOutlookHistory()" style="color:var(--red);border-color:rgba(255,71,87,.3)">🗑 Clear History</button>
+                </div>
+              </div>
+              <div id="history-list"></div>
+            </div>
+          </div>
 
         </div>
       </div>
@@ -2177,9 +2237,20 @@ tr:hover td{background:rgba(255,255,255,.015)}
             </div>
           </div>
           <div class="card" style="margin-top:14px">
-            <div class="sec">Trading Affirmations & Commitments</div>
-            <div class="fg"><label>My Trading Commitments (one per line)</label>
-              <textarea id="plan-commitments" rows="5" placeholder="e.g.&#10;I will only take trades that match my setup criteria&#10;I will never risk more than 1% per trade&#10;I will stop trading after hitting my daily loss limit&#10;I will journal every trade, win or lose"></textarea>
+            <div class="sec">✨ Trading Affirmations</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">Positive statements you read aloud before every session to reinforce your mindset. These also rotate on your Home screen.</div>
+            <div class="fg">
+              <label>My Affirmations <span style="font-size:10px;color:var(--text3);font-weight:400">(one per line — each line becomes a separate affirmation)</span></label>
+              <textarea id="plan-affirmations" rows="6" placeholder="e.g.&#10;I trade with discipline and follow my plan every time.&#10;I focus on process, not outcome. Profits follow good execution.&#10;I am patient. I wait for my setup — I do not chase.&#10;Losses are feedback. I learn, adjust, and move forward.&#10;I protect my capital above all else."></textarea>
+            </div>
+            <button class="btn btn-c" onclick="savePlanSection('affirmations')">Save Affirmations</button>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="sec">📋 Trading Commitments</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">Rules you commit to following — your non-negotiables as a trader.</div>
+            <div class="fg">
+              <label>My Commitments <span style="font-size:10px;color:var(--text3);font-weight:400">(one per line)</span></label>
+              <textarea id="plan-commitments" rows="6" placeholder="e.g.&#10;I will only take trades that match my setup criteria.&#10;I will never risk more than 1% per trade.&#10;I will stop trading after hitting my daily loss limit.&#10;I will journal every trade, win or lose.&#10;I will take a mandatory break after 3 consecutive losses."></textarea>
             </div>
             <button class="btn btn-c" onclick="savePlanSection('commitments')">Save Commitments</button>
           </div>
@@ -3866,6 +3937,35 @@ tr:hover td{background:rgba(255,255,255,.015)}
   </div>
 
   <!-- Alert Modal -->
+  <!-- Greeting Edit Modal -->
+<div class="modal-bg" id="greeting-edit-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <span>✎ Edit Greeting</span>
+      <button class="modal-close" onclick="closeModal('greeting-edit-modal')">×</button>
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Your Name</label>
+      <input id="ge-name" type="text" placeholder="e.g. Alex" oninput="updateGreetingEditPreview()">
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Greeting Subtitle <span style="font-size:10px;color:var(--text3)">(shown below your name)</span></label>
+      <textarea id="ge-subtitle" rows="3" placeholder="e.g. Ready to execute. Stay disciplined and trust your process." style="resize:none" oninput="updateGreetingEditPreview()"></textarea>
+    </div>
+    <!-- Live preview -->
+    <div style="background:var(--bg3);border-radius:9px;padding:12px 14px;margin-bottom:16px">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Preview</div>
+      <div style="font-family:var(--head);font-size:18px;font-weight:800;margin-bottom:4px" id="ge-preview-title">Good morning, Trader.</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6" id="ge-preview-sub"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-c" style="flex:1;justify-content:center" onclick="saveGreetingEdit()">Save</button>
+      <button class="btn btn-g" onclick="closeModal('greeting-edit-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
   <!-- Trading Alert Modal -->
 <div class="modal-bg" id="trading-alert-modal">
   <div class="modal" style="max-width:440px">
@@ -3945,6 +4045,8 @@ tr:hover td{background:rgba(255,255,255,.015)}
         <label>Trigger</label>
         <select id="rm-trigger" onchange="updateRmTrigger()">
           <option value="time">Specific time each day</option>
+          <option value="weekly-time">Specific time each week</option>
+          <option value="monthly-time">Specific time each month</option>
           <option value="market-open">Market open (9:30 AM ET)</option>
           <option value="market-close">Market close (4:00 PM ET)</option>
           <option value="premarket">Pre-market (8:00 AM ET)</option>
@@ -3953,7 +4055,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
         </select>
       </div>
 
-      <!-- Time picker (shown for 'time' trigger) -->
+      <!-- Daily time picker -->
       <div id="rm-time-wrap" style="margin-bottom:8px">
         <div class="fg" style="margin-bottom:0">
           <label>Time</label>
@@ -3961,7 +4063,59 @@ tr:hover td{background:rgba(255,255,255,.015)}
         </div>
       </div>
 
-      <!-- Interval picker (shown for 'interval') -->
+      <!-- Weekly picker: day of week + time -->
+      <div id="rm-weekly-wrap" style="display:none;margin-bottom:8px">
+        <div class="g2">
+          <div class="fg" style="margin-bottom:0">
+            <label>Day of Week</label>
+            <select id="rm-week-day">
+              <option value="1">Monday</option>
+              <option value="2">Tuesday</option>
+              <option value="3">Wednesday</option>
+              <option value="4">Thursday</option>
+              <option value="5">Friday</option>
+              <option value="6">Saturday</option>
+              <option value="0">Sunday</option>
+            </select>
+          </div>
+          <div class="fg" style="margin-bottom:0">
+            <label>Time</label>
+            <input id="rm-weekly-time" type="time" value="08:00">
+          </div>
+        </div>
+      </div>
+
+      <!-- Monthly picker: day of month + time -->
+      <div id="rm-monthly-wrap" style="display:none;margin-bottom:8px">
+        <div class="g2">
+          <div class="fg" style="margin-bottom:0">
+            <label>Day of Month</label>
+            <select id="rm-month-day">
+              <option value="1">1st</option>
+              <option value="2">2nd</option>
+              <option value="3">3rd</option>
+              <option value="4">4th</option>
+              <option value="5">5th</option>
+              <option value="6">6th</option>
+              <option value="7">7th</option>
+              <option value="8">8th</option>
+              <option value="9">9th</option>
+              <option value="10">10th</option>
+              <option value="15">15th</option>
+              <option value="20">20th</option>
+              <option value="25">25th</option>
+              <option value="28">28th</option>
+              <option value="last">Last day</option>
+            </select>
+          </div>
+          <div class="fg" style="margin-bottom:0">
+            <label>Time</label>
+            <input id="rm-monthly-time" type="time" value="08:00">
+          </div>
+        </div>
+      </div>
+
+      <!-- Interval picker -->
       <div id="rm-interval-wrap" style="display:none;margin-bottom:8px">
         <div class="g2">
           <div class="fg" style="margin-bottom:0"><label>Every</label><input id="rm-interval-val" type="number" value="2" min="1"></div>
@@ -3969,6 +4123,8 @@ tr:hover td{background:rgba(255,255,255,.015)}
             <select id="rm-interval-unit">
               <option value="minutes">Minutes</option>
               <option value="hours" selected>Hours</option>
+              <option value="days">Days</option>
+              <option value="weeks">Weeks</option>
             </select>
           </div>
         </div>
@@ -4279,6 +4435,9 @@ let marketOutlook = {
     thesisResult:'', grade:'', review:''
   }
 };
+
+// History of saved outlook snapshots: [{date:'YYYY-MM-DD', daily:{...}, weekly:{...}, monthly:{...}}]
+let outlookHistory = [];
 
 // ═══════════════════════════════════════
 // UTILS
@@ -7266,6 +7425,7 @@ let tradingPlan = {
   setups:['Breakout','Pullback','VWAP Play'],
   avoid:'Counter-trend trades in choppy markets. News events without clear direction.',
   idealMkt:'Trending days with clear higher highs/lows, volume above 20-day average.',
+  affirmations:'I trade with discipline and follow my plan every time.\nI focus on process, not outcome. Profits follow good execution.\nI am patient. I wait for my setup — I do not chase.\nLosses are feedback. I learn, adjust, and move forward.\nI protect my capital above all else.',
   commitments:'I will only take trades that match my written setup criteria.\nI will never risk more than 1% of my account per trade.\nI will stop trading after hitting my daily loss limit.\nI will journal every trade, win or lose.\nI will take a mandatory break after 3 consecutive losses.',
   riskPct:1, riskDollar:500, maxSize:5, scaleIn:'no',
   dailyLoss:500, dailyTarget:1000, maxTrades:5, consecStop:3, breakLoss:200,
@@ -7458,7 +7618,8 @@ function renderPlanStrategy() {
     'plan-markets': tradingPlan.markets||'', 'plan-exp': tradingPlan.exp||'Intermediate (1–3 yrs)',
     'plan-sessions': tradingPlan.sessions||'', 'plan-edge': tradingPlan.edge||'',
     'plan-avoid': tradingPlan.avoid||'', 'plan-ideal-mkt': tradingPlan.idealMkt||'',
-    'plan-commitments': tradingPlan.commitments||''
+    'plan-commitments': tradingPlan.commitments||'',
+    'plan-affirmations': tradingPlan.affirmations||''
   };
   Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
 
@@ -7486,7 +7647,20 @@ function savePlanSection(section) {
     tradingPlan.edge=g('plan-edge'); tradingPlan.avoid=g('plan-avoid');
     tradingPlan.idealMkt=g('plan-ideal-mkt');
   }
-  if(section==='commitments') tradingPlan.commitments=g('plan-commitments');
+  if(section==='affirmations') {
+    tradingPlan.affirmations = g('plan-affirmations');
+    // Rebuild home-screen affirmations array from user's custom lines
+    const lines = (tradingPlan.affirmations || '').split('\n').map(l => l.trim()).filter(Boolean);
+    if(lines.length > 0) {
+      AFFS.splice(0, AFFS.length, ...lines);
+      affIdx = 0;
+      const el = document.getElementById('aff-txt');
+      if(el) el.textContent = AFFS[0];
+    }
+    showNotif('Affirmations saved ✨', 'Your affirmations now rotate on the Home screen', 'success');
+    saveCurrentUserData(); return;
+  }
+  if(section==='commitments') tradingPlan.commitments = g('plan-commitments');
   if(section==='sizing'){
     tradingPlan.riskPct=parseFloat(g('plan-risk-pct'))||1;
     tradingPlan.riskDollar=parseFloat(g('plan-risk-dollar'))||500;
@@ -7655,12 +7829,23 @@ function renderGoals() {
           <button class="ic-btn del" onclick="deleteGoal('${g.id}')" title="Delete">✕</button>
         </div>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="font-size:12px;color:var(--text2)">${label}</div>
-        <div style="font-family:var(--mono);font-size:14px;font-weight:600;color:${color}">${safe.toFixed(0)}%</div>
-      </div>
-      <div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">
-        <div style="height:100%;border-radius:4px;background:${color};width:${safe}%;transition:width .6s"></div>
+      <!-- Progress bar section -->
+      <div style="margin-bottom:4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+          <div style="font-size:12px;color:var(--text2);font-weight:500">${label}</div>
+          <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:${color}">${safe.toFixed(0)}%</div>
+        </div>
+        <div style="height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;position:relative">
+          <div style="height:100%;border-radius:5px;background:${color};width:${safe}%;transition:width .8s cubic-bezier(.4,0,.2,1);
+            ${safe>=100?'box-shadow:0 0 8px rgba(0,230,118,.6)':safe>=60?'box-shadow:0 0 6px rgba(0,212,255,.4)':''}"></div>
+          ${safe>5&&safe<100?`<div style="position:absolute;right:0;top:0;height:100%;width:${100-safe}%;background:transparent;border-left:2px dashed rgba(255,255,255,.12)"></div>`:''}
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:3px">
+          <div style="font-size:10px;color:var(--text3)">Start</div>
+          ${safe>=100
+            ? `<div style="font-size:10px;color:var(--green);font-weight:700">🏆 Target Reached!</div>`
+            : `<div style="font-size:10px;color:var(--text3)">Target</div>`}
+        </div>
       </div>
     </div>`;
   }).join('') : '<div style="text-align:center;padding:36px 20px;color:var(--text3)"><div style="font-size:32px;margin-bottom:10px">🏆</div><div style="font-size:13px">No active goals for this period.</div><div style="font-size:12px;margin-top:6px">Click "+ New Goal" to create one.</div></div>';
@@ -7680,7 +7865,14 @@ function renderGoals() {
 function setGoalFilter(f){goalFilter=f;renderGoals();}
 function markGoalComplete(id){const g=tradingGoals.find(x=>x.id===id);if(g){g.completed=true;renderGoals();showNotif('Goal achieved! 🏆',g.name,'success');}}
 function restoreGoal(id){const g=tradingGoals.find(x=>x.id===id);if(g){g.completed=false;renderGoals();}}
-function deleteGoal(id){if(!confirm('Delete this goal?'))return;tradingGoals=tradingGoals.filter(g=>g.id!==id);renderGoals();}
+function deleteGoal(id) {
+  const g = tradingGoals.find(x => x.id === id);
+  showConfirm('🗑 Delete Goal?', 'Delete "' + (g?.name||'this goal') + '"? Cannot be undone.', 'var(--red)', function() {
+    const kept = tradingGoals.filter(x => x.id !== id);
+    tradingGoals.splice(0, tradingGoals.length, ...kept);
+    renderGoals(); saveCurrentUserData();
+  });
+}
 
 function openGoalModal(editId) {
   editingGoalId = editId||null;
@@ -8863,6 +9055,7 @@ function snapshotUserData() {
     appSettings: appSettings,
     calChkSessions: calChkSessions,
     marketOutlook: marketOutlook,
+    outlookHistory: outlookHistory,
   };
 }
 
@@ -8889,6 +9082,9 @@ function applyUserData(data) {
     ['daily','weekly','monthly'].forEach(tf => {
       if(data.marketOutlook[tf]) Object.assign(marketOutlook[tf], data.marketOutlook[tf]);
     });
+  }
+  if(data.outlookHistory) {
+    outlookHistory.splice(0, outlookHistory.length, ...data.outlookHistory);
   }
 }
 
@@ -9190,6 +9386,10 @@ function saveCurrentUserData() {
   saveUserData(currentUser.username, { ...existing, ...snap });
   // Auto-push to Firebase if enabled
   fbAutoSyncIfEnabled();
+  // Refresh goal progress bars if Goals tab is visible
+  if(document.getElementById('plan-goals-list')) {
+    try { renderGoals(); renderGoalsOverview(); } catch(e) {}
+  }
 }
 
 // ── Default data for new accounts ──
@@ -10602,17 +10802,24 @@ function initOutlook() {
   populateOutlookFields();
   renderOutlookBiasButtons();
   renderOutlookSavedAt();
+  renderOutlookReminderStatus();
 }
 
 // ── Tab switching ──────────────────────────────────────────
 function outlookTab(tf, el) {
   _outlookTab = tf;
-  ['daily','weekly','monthly'].forEach(t => {
+  ['daily','weekly','monthly','history'].forEach(t => {
     const tab = document.getElementById('ot-' + t);
     const pnl = document.getElementById('op-' + t);
     if(tab) tab.classList.toggle('active', t === tf);
     if(pnl) pnl.style.display = t === tf ? 'block' : 'none';
   });
+  if(tf === 'history') {
+    // Set default month filter to current month
+    const mf = document.getElementById('history-month-filter');
+    if(mf && !mf.value) mf.value = new Date().toISOString().slice(0,7);
+    renderOutlookHistory();
+  }
 }
 
 // ── Conviction stars (1–5) ─────────────────────────────────
@@ -10721,26 +10928,56 @@ function collectOutlookFields() {
 // ── Save ────────────────────────────────────────────────────
 function saveOutlook() {
   collectOutlookFields();
+  archiveOutlook();       // snapshot into history before persisting
   saveCurrentUserData();
   renderOutlookSavedAt();
   showNotif('Outlook saved 📊', 'Your market analysis has been saved', 'success');
 }
 
 // ── Clear all fields for current tab ───────────────────────
+// Reset a single timeframe's outlook fields
+function clearOutlookTab() {
+  const tf = _outlookTab;
+  if(tf === 'history') { showNotif('Switch to a tab first', 'Select Daily, Weekly, or Monthly to reset', 'info'); return; }
+  const label = tf.charAt(0).toUpperCase() + tf.slice(1);
+  showConfirm(
+    '↺ Reset ' + label + ' Outlook?',
+    'Clear all ' + label + ' fields? Your other timeframes are unaffected.',
+    'var(--cyan)',
+    function() {
+      Object.keys(marketOutlook[tf]).forEach(k => {
+        marketOutlook[tf][k] = typeof marketOutlook[tf][k] === 'number' ? 0 : '';
+      });
+      populateOutlookFields();
+      renderOutlookBiasButtons();
+      renderOutlookConviction(tf);
+      renderOutlookSavedAt();
+      showNotif(label + ' outlook reset', 'All ' + label.toLowerCase() + ' fields cleared', 'info');
+    }
+  );
+}
+
+// Reset all three timeframes
 function clearOutlook() {
-  if(!confirm('Clear all fields for all timeframes? This cannot be undone.')) return;
-  ['daily','weekly','monthly'].forEach(tf => {
-    Object.keys(marketOutlook[tf]).forEach(k => {
-      marketOutlook[tf][k] = typeof marketOutlook[tf][k] === 'number' ? 0 : '';
-    });
-  });
-  populateOutlookFields();
-  renderOutlookBiasButtons();
-  renderOutlookConviction('daily');
-  renderOutlookConviction('weekly');
-  renderOutlookConviction('monthly');
-  renderOutlookSavedAt();
-  showNotif('Outlook cleared', 'All fields reset', 'info');
+  showConfirm(
+    '↺ Clear All Outlook?',
+    'Reset Daily, Weekly, and Monthly outlook fields? This cannot be undone.',
+    'var(--red)',
+    function() {
+      ['daily','weekly','monthly'].forEach(tf => {
+        Object.keys(marketOutlook[tf]).forEach(k => {
+          marketOutlook[tf][k] = typeof marketOutlook[tf][k] === 'number' ? 0 : '';
+        });
+      });
+      populateOutlookFields();
+      renderOutlookBiasButtons();
+      renderOutlookConviction('daily');
+      renderOutlookConviction('weekly');
+      renderOutlookConviction('monthly');
+      renderOutlookSavedAt();
+      showNotif('Outlook cleared', 'All fields reset', 'info');
+    }
+  );
 }
 
 // ── Saved-at timestamp ──────────────────────────────────────
@@ -11230,10 +11467,14 @@ function selectRmType(type) {
 
 function updateRmTrigger() {
   const trigger = document.getElementById('rm-trigger')?.value;
-  const timeWrap  = document.getElementById('rm-time-wrap');
-  const intvWrap  = document.getElementById('rm-interval-wrap');
-  if(timeWrap)  timeWrap.style.display  = trigger === 'time' ? 'block' : 'none';
-  if(intvWrap)  intvWrap.style.display  = trigger === 'interval' ? 'block' : 'none';
+  const show = (id, visible) => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = visible ? 'block' : 'none';
+  };
+  show('rm-time-wrap',    trigger === 'time');
+  show('rm-weekly-wrap',  trigger === 'weekly-time');
+  show('rm-monthly-wrap', trigger === 'monthly-time');
+  show('rm-interval-wrap', trigger === 'interval');
 }
 
 // ─ Open reminder modal ────────────────────────────────────
@@ -11250,12 +11491,16 @@ function openAlModal(editId) {
     const selEl = document.getElementById('rm-type-select');
     if(selEl) selEl.value = _rmTypeSelected;
     const set = (id, v) => { const el = document.getElementById(id); if(el) el.value = v||''; };
-    set('rm-name',    r.name);
-    set('rm-message', r.message);
-    set('rm-trigger', r.trigger || 'time');
-    set('rm-time',    r.time || '09:00');
-    set('rm-interval-val',  r.intervalVal || 2);
-    set('rm-interval-unit', r.intervalUnit || 'hours');
+    set('rm-name',         r.name);
+    set('rm-message',      r.message);
+    set('rm-trigger',      r.trigger || 'time');
+    set('rm-time',         r.time || '09:00');
+    set('rm-interval-val', r.intervalVal || 2);
+    set('rm-interval-unit',r.intervalUnit || 'hours');
+    set('rm-week-day',     r.weekDay || '1');
+    set('rm-weekly-time',  r.weeklyTime || '08:00');
+    set('rm-month-day',    r.monthDay || '1');
+    set('rm-monthly-time', r.monthlyTime || '08:00');
     // Days
 
     const setChk = (id, v) => { const el = document.getElementById(id); if(el) el.checked = !!v; };
@@ -11292,6 +11537,10 @@ function saveReminder() {
   const time    = document.getElementById('rm-time')?.value || '09:00';
   const intervalVal  = parseInt(document.getElementById('rm-interval-val')?.value) || 2;
   const intervalUnit = document.getElementById('rm-interval-unit')?.value || 'hours';
+  const weekDay      = document.getElementById('rm-week-day')?.value || '1';
+  const weeklyTime   = document.getElementById('rm-weekly-time')?.value || '08:00';
+  const monthDay     = document.getElementById('rm-month-day')?.value || '1';
+  const monthlyTime  = document.getElementById('rm-monthly-time')?.value || '08:00';
   const days    = ['mon','tue','wed','thu','fri']; // default weekdays (Active Days selector removed)
   const inApp   = document.getElementById('rm-inapp')?.checked !== false;
   const sound   = document.getElementById('rm-sound')?.checked !== false;
@@ -11300,14 +11549,28 @@ function saveReminder() {
 
   if(!name) { showNotif('Required', 'Enter a reminder name', 'danger'); return; }
 
+  // Capture outlook timeframe tag if set from Outlook page
+  var _modal = document.getElementById('al-modal');
+  var outlookTf = (_modal && _modal.dataset.outlookTf) ? _modal.dataset.outlookTf : '';
+  // Clear it so it doesn't leak to the next reminder
+  if(_modal) _modal.dataset.outlookTf = '';
+
   const reminder = {
     id: _editingReminderId || Date.now(),
     type: _rmTypeSelected,
-    name, message, trigger, time, intervalVal, intervalUnit, days,
+    name, message, trigger, time, intervalVal, intervalUnit,
+    weekDay, weeklyTime, monthDay, monthlyTime, days,
     inApp, sound, browser, email,
     active: true, triggered: false,
-    desc: `${trigger === 'time' ? 'Daily at ' + fmtTime12(time) : trigger === 'interval' ? 'Every ' + intervalVal + ' ' + intervalUnit : trigger.replace(/-/g,' ')}`,
+    desc: (function() {
+      if(trigger === 'time')         return 'Daily at ' + fmtTime12(time);
+      if(trigger === 'weekly-time')  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][parseInt(weekDay)] + 's at ' + fmtTime12(weeklyTime);
+      if(trigger === 'monthly-time') return (monthDay === 'last' ? 'Last day' : ordinal(parseInt(monthDay))) + ' of month at ' + fmtTime12(monthlyTime);
+      if(trigger === 'interval')     return 'Every ' + intervalVal + ' ' + intervalUnit;
+      return trigger.replace(/-/g,' ');
+    })(),
     at: null, createdAt: new Date().toISOString().slice(0,10),
+    outlookTf: outlookTf,
   };
 
   if(_editingReminderId) {
@@ -11323,6 +11586,7 @@ function saveReminder() {
   renderAlerts();
   updateAlDot();
   saveCurrentUserData();
+  renderOutlookReminderStatus();
   // Request browser notification permission if needed
   if(browser && Notification.permission === 'default') requestBrowserNotifPermission();
 }
@@ -11461,8 +11725,29 @@ function checkReminders() {
       case 'premarket':
         shouldFire = hh === 8 && mm === 0;
         break;
+      case 'weekly-time': {
+        const wDay = parseInt(r.weekDay || '1');
+        const wTime = r.weeklyTime || '08:00';
+        shouldFire = now.getDay() === wDay && timeStr === wTime;
+        break;
+      }
+      case 'monthly-time': {
+        const mDay = r.monthDay || '1';
+        const mTime = r.monthlyTime || '08:00';
+        const todayDate = now.getDate();
+        const lastDay   = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+        const targetDay = mDay === 'last' ? lastDay : parseInt(mDay);
+        shouldFire = todayDate === targetDay && timeStr === mTime;
+        break;
+      }
       case 'interval': {
-        const mins = (r.intervalUnit === 'hours' ? (r.intervalVal||2)*60 : (r.intervalVal||30));
+        const unitMins = {
+          'minutes': 1,
+          'hours':   60,
+          'days':    1440,
+          'weeks':   10080
+        };
+        const mins = (unitMins[r.intervalUnit] || 60) * (r.intervalVal || 2);
         const key = 'r_' + r.id;
         _reminderIntervalCounters[key] = (_reminderIntervalCounters[key] || 0) + 1;
         shouldFire = _reminderIntervalCounters[key] >= mins;
@@ -11509,6 +11794,11 @@ function fmtTime12(t) {
   const h12  = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh;
   return h12 + ':' + String(mm).padStart(2,'0') + ' ' + ampm;
 }
+function ordinal(n) {
+  const s = ['th','st','nd','rd'];
+  const v = n % 100;
+  return n + (s[(v-20)%10] || s[v] || s[0]);
+}
 
 
 
@@ -11545,6 +11835,380 @@ function confirmCancel() {
   document.getElementById('confirm-modal').classList.remove('open');
   _confirmCallback = null;
 }
+
+
+// ═══════════════════════════════════════════════════════════
+// OUTLOOK REMINDER SHORTCUTS
+// ═══════════════════════════════════════════════════════════
+
+const OUTLOOK_REMINDER_DEFAULTS = {
+  daily: {
+    name: 'Daily Outlook Reminder',
+    msg:  'Time to fill in your Daily Market Outlook — bias, key levels, and trade plan for today.',
+    trigger: 'time',
+    time: '08:00',
+  },
+  weekly: {
+    name: 'Weekly Outlook Reminder',
+    msg:  'Start of week — update your Weekly Outlook: macro context, key levels, and game plan.',
+    trigger: 'time',
+    time: '08:00',
+  },
+  monthly: {
+    name: 'Monthly Outlook Reminder',
+    msg:  'New month — record your Monthly Outlook: thesis, sector themes, and monthly targets.',
+    trigger: 'time',
+    time: '08:00',
+  },
+};
+
+// Open the reminder modal pre-filled for a specific outlook timeframe
+function openOutlookReminder(tf) {
+  const def = OUTLOOK_REMINDER_DEFAULTS[tf];
+  if(!def) return;
+
+  // Check if a reminder for this timeframe already exists
+  const existing = alertRules.find(function(r) {
+    return r.type === 'outlook' && r.outlookTf === tf;
+  });
+
+  if(existing) {
+    // Edit the existing one
+    openAlModal(existing.id);
+    return;
+  }
+
+  // New reminder — pre-fill the modal fields, then open
+  _editingReminderId = null;
+  _rmTypeSelected = 'outlook';
+
+  // Pre-fill fields directly before opening
+  const fieldsToSet = {
+    'rm-type-select': 'outlook',
+    'rm-name':        def.name,
+    'rm-message':     def.msg,
+    'rm-trigger':     def.trigger,
+    'rm-time':        def.time,
+    'rm-interval-val':  '2',
+    'rm-interval-unit': 'hours',
+  };
+  Object.keys(fieldsToSet).forEach(function(id) {
+    var el = document.getElementById(id);
+    if(el) el.value = fieldsToSet[id];
+  });
+
+  // Set checkboxes
+  var inappEl  = document.getElementById('rm-inapp');
+  var soundEl  = document.getElementById('rm-sound');
+  var browserEl= document.getElementById('rm-browser');
+  var emailEl  = document.getElementById('rm-email');
+  if(inappEl)   inappEl.checked   = true;
+  if(soundEl)   soundEl.checked   = true;
+  if(browserEl) browserEl.checked = false;
+  if(emailEl)   emailEl.checked   = false;
+
+  // Store the timeframe in a data attr on the modal so saveOutlookReminder can read it
+  var modal = document.getElementById('al-modal');
+  if(modal) modal.dataset.outlookTf = tf;
+
+  updateRmTrigger();
+  document.getElementById('al-modal-title').textContent = '🔭 ' +
+    tf.charAt(0).toUpperCase() + tf.slice(1) + ' Outlook Reminder';
+  document.getElementById('al-modal').classList.add('open');
+}
+
+// Render the reminder status strips on the Outlook page
+function renderOutlookReminderStatus() {
+  ['daily','weekly','monthly'].forEach(function(tf) {
+    var el = document.getElementById('outlook-reminder-status-' + tf);
+    if(!el) return;
+    var r = alertRules.find(function(a) {
+      return a.type === 'outlook' && a.outlookTf === tf;
+    });
+    if(r) {
+      el.innerHTML = '<strong style="color:var(--cyan)">' + r.name + '</strong>' +
+        ' — ' + (r.desc || '') +
+        ' <span style="color:var(--text3);font-size:11px">' +
+        (r.active ? '✓ Active' : '✗ Off') + '</span>';
+    } else {
+      el.textContent = 'No reminder set for ' +
+        tf.charAt(0).toUpperCase() + tf.slice(1) + ' Outlook';
+    }
+  });
+}
+
+
+
+// ═══════════════════════════════════════════════════════════
+// OUTLOOK HISTORY
+// ═══════════════════════════════════════════════════════════
+
+// ── Archive current outlook when saved ────────────────────
+function archiveOutlook() {
+  const today = new Date().toISOString().slice(0, 10);
+  const snap = {
+    date: today,
+    savedAt: new Date().toISOString(),
+    daily:   JSON.parse(JSON.stringify(marketOutlook.daily)),
+    weekly:  JSON.parse(JSON.stringify(marketOutlook.weekly)),
+    monthly: JSON.parse(JSON.stringify(marketOutlook.monthly)),
+  };
+  // Replace existing entry for today if it exists, otherwise prepend
+  const todayIdx = outlookHistory.findIndex(h => h.date === today);
+  if(todayIdx >= 0) {
+    outlookHistory[todayIdx] = snap;
+  } else {
+    outlookHistory.unshift(snap);
+  }
+  // Keep at most 90 entries (~ 3 months of daily)
+  if(outlookHistory.length > 90) outlookHistory.splice(90);
+}
+
+// ── Tab switching — extend to handle history ──────────────
+function outlookHistoryTab(tf, el) {
+  _outlookTab = tf;
+  ['daily','weekly','monthly','history'].forEach(t => {
+    const tab = document.getElementById('ot-' + t);
+    const pnl = document.getElementById('op-' + t);
+    if(tab) tab.classList.toggle('active', t === tf);
+    if(pnl) pnl.style.display = t === tf ? 'block' : 'none';
+  });
+  if(tf === 'history') renderOutlookHistory();
+}
+
+// ── Render the history list ────────────────────────────────
+function renderOutlookHistory() {
+  const listEl = document.getElementById('history-list');
+  if(!listEl) return;
+
+  const tfFilter = document.getElementById('history-tf-filter')?.value || 'all';
+  const monthFilter = document.getElementById('history-month-filter')?.value || '';
+
+  // Set default month filter to current month on first load
+  const monthEl = document.getElementById('history-month-filter');
+  if(monthEl && !monthEl.value) {
+    monthEl.value = new Date().toISOString().slice(0, 7);
+  }
+  const activeMonth = (monthEl && monthEl.value) ? monthEl.value : '';
+
+  let entries = outlookHistory.slice();
+  if(activeMonth) {
+    entries = entries.filter(h => h.date.startsWith(activeMonth));
+  }
+
+  if(!entries.length) {
+    listEl.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text3)">
+      <div style="font-size:32px;margin-bottom:10px">📭</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">No history yet</div>
+      <div style="font-size:12px">Your outlook is archived each time you click 💾 Save.<br>Switch to Daily, Weekly, or Monthly, fill in your analysis, and save.</div>
+    </div>`;
+    return;
+  }
+
+  const biasIcon  = {bullish:'🟢', neutral:'⚪', bearish:'🔴', '':'—'};
+  const biasColor = {bullish:'var(--green)', neutral:'var(--gold)', bearish:'var(--red)', '':'var(--text3)'};
+  const conv = n => n ? '●'.repeat(n) + '○'.repeat(5-n) : '—';
+
+  const tfLabels = {daily:'📅 Daily', weekly:'📆 Weekly', monthly:'🗓 Monthly'};
+  const tfsToShow = tfFilter === 'all' ? ['daily','weekly','monthly'] : [tfFilter];
+
+  listEl.innerHTML = entries.map(h => {
+    const dateObj = new Date(h.date + 'T12:00:00');
+    const dateLabel = dateObj.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', year:'numeric'});
+
+    // Build sections for the timeframes that have content
+    const sections = tfsToShow.map(tf => {
+      const d = h[tf];
+      if(!d) return '';
+      const hasBias = d.bias;
+      const hasContent = hasBias || d.r1 || d.plan || d.macro || d.thesis || d.premarket || d.lessons || d.review;
+      if(!hasContent) return '';
+
+      const rows = [];
+      if(tf === 'daily') {
+        if(d.r1 || d.r2) rows.push(['Resistance', [d.r1, d.r2].filter(Boolean).join(' / ')]);
+        if(d.s1 || d.s2) rows.push(['Support', [d.s1, d.s2].filter(Boolean).join(' / ')]);
+        if(d.poc)         rows.push(['POC / VWAP', d.poc]);
+        if(d.event1)      rows.push(['Events', [d.event1, d.event2, d.event3].filter(Boolean).join(' · ')]);
+        if(d.premarket)   rows.push(['Pre-Market', d.premarket]);
+        if(d.plan)        rows.push(['Trade Plan', d.plan]);
+        if(d.avoid)       rows.push(['Will NOT do', d.avoid]);
+        if(d.grade)       rows.push(['Grade', d.grade]);
+        if(d.lessons)     rows.push(['Lessons', d.lessons]);
+      } else if(tf === 'weekly') {
+        if(d.r1 || d.s1) rows.push(['Levels', 'R: '+(d.r1||'—')+' / S: '+(d.s1||'—')]);
+        if(d.range)       rows.push(['Range', d.range]);
+        if(d.event1)      rows.push(['Events', [d.event1, d.event2].filter(Boolean).join(' · ')]);
+        if(d.earnings)    rows.push(['Earnings', d.earnings]);
+        if(d.macro)       rows.push(['Macro', d.macro]);
+        if(d.plan)        rows.push(['Game Plan', d.plan]);
+        if(d.targetPnl)   rows.push(['Target', '$'+d.targetPnl + (d.maxLoss?' / max loss $'+d.maxLoss:'')]);
+        if(d.grade)       rows.push(['Grade', d.grade]);
+        if(d.review)      rows.push(['Review', d.review]);
+      } else {
+        if(d.r1 || d.s1) rows.push(['Levels', 'R: '+(d.r1||'—')+' / S: '+(d.s1||'—')]);
+        if(d.fed)         rows.push(['Fed Outlook', d.fed]);
+        if(d.sectorLead)  rows.push(['Leading Sector', d.sectorLead]);
+        if(d.sectorLag)   rows.push(['Avoiding', d.sectorLag]);
+        if(d.thesis)      rows.push(['Thesis', d.thesis]);
+        if(d.setups)      rows.push(['Best Setups', d.setups]);
+        if(d.targetPnl)   rows.push(['Monthly Target', '$'+d.targetPnl]);
+        if(d.grade)       rows.push(['Grade', d.grade]);
+        if(d.review)      rows.push(['Review', d.review]);
+      }
+
+      const bColor = biasColor[d.bias||''];
+      return `
+        <div style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+            <span style="font-size:13px;font-weight:700;color:var(--text)">${tfLabels[tf]}</span>
+            <span style="font-size:18px">${biasIcon[d.bias||'']}</span>
+            <span style="font-size:12px;font-weight:600;color:${bColor}">${d.bias ? d.bias.charAt(0).toUpperCase()+d.bias.slice(1) : 'No bias'}</span>
+            ${d.conviction ? `<span style="font-size:11px;color:var(--text3);font-family:var(--mono)">${conv(d.conviction)}</span>` : ''}
+          </div>
+          ${rows.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
+            ${rows.map((r,i) => `<tr style="background:${i%2===0?'var(--bg3)':'transparent'}">
+              <td style="padding:5px 8px;color:var(--text3);font-weight:600;width:120px;vertical-align:top;white-space:nowrap">${r[0]}</td>
+              <td style="padding:5px 8px;color:var(--text);line-height:1.5">${r[1].replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
+            </tr>`).join('')}
+          </table>` : `<div style="font-size:11px;color:var(--text3);padding:4px 0">No details recorded.</div>`}
+        </div>`;
+    }).filter(Boolean).join('');
+
+    if(!sections) return '';
+
+    return `<div style="background:var(--bg2);border:1px solid var(--bdr2);border-radius:12px;padding:16px 18px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div style="font-family:var(--head);font-size:14px;font-weight:700">${dateLabel}</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-g btn-xs" onclick="loadOutlookSnapshot('${h.date}')" title="Load this snapshot into the editor">✎ Load</button>
+          <button class="btn btn-g btn-xs" style="color:var(--red);border-color:rgba(255,71,87,.3)" onclick="deleteOutlookSnapshot('${h.date}')" title="Delete this entry">✕</button>
+        </div>
+      </div>
+      ${sections || '<div style="font-size:12px;color:var(--text3);padding:4px 0">No content recorded for this date.</div>'}
+    </div>`;
+  }).filter(Boolean).join('') || `<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px">No entries match the current filter.</div>`;
+}
+
+// ── Load a historical snapshot into the editor ─────────────
+function loadOutlookSnapshot(date) {
+  const h = outlookHistory.find(e => e.date === date);
+  if(!h) return;
+  showConfirm(
+    '📂 Load Snapshot?',
+    'Load the outlook from ' + date + ' into the editor? Your current unsaved changes will be replaced.',
+    'var(--cyan)',
+    function() {
+      ['daily','weekly','monthly'].forEach(tf => {
+        if(h[tf]) Object.assign(marketOutlook[tf], h[tf]);
+      });
+      populateOutlookFields();
+      renderOutlookBiasButtons();
+      renderOutlookConviction('daily');
+      renderOutlookConviction('weekly');
+      renderOutlookConviction('monthly');
+      // Switch to daily tab to show loaded data
+      outlookHistoryTab('daily', document.getElementById('ot-daily'));
+      showNotif('Snapshot loaded 📂', 'Outlook from ' + date + ' loaded into editor', 'success');
+    }
+  );
+}
+
+// ── Delete a single history snapshot ──────────────────────
+function deleteOutlookSnapshot(date) {
+  showConfirm(
+    '🗑 Delete Entry?',
+    'Remove the outlook snapshot for ' + date + '?',
+    'var(--red)',
+    function() {
+      const kept = outlookHistory.filter(h => h.date !== date);
+      outlookHistory.splice(0, outlookHistory.length, ...kept);
+      saveCurrentUserData();
+      renderOutlookHistory();
+      showNotif('Deleted', 'Outlook for ' + date + ' removed', 'info');
+    }
+  );
+}
+
+// ── Clear all history ──────────────────────────────────────
+function clearOutlookHistory() {
+  if(!outlookHistory.length) { showNotif('Nothing to clear', 'No history saved yet', 'info'); return; }
+  showConfirm(
+    '🗑 Clear All History?',
+    'Delete all ' + outlookHistory.length + ' saved outlook entries? This cannot be undone.',
+    'var(--red)',
+    function() {
+      outlookHistory.splice(0, outlookHistory.length);
+      saveCurrentUserData();
+      renderOutlookHistory();
+      showNotif('History cleared', 'All outlook history deleted', 'info');
+    }
+  );
+}
+
+
+
+// ═══════════════════════════════════════════════════════════
+// GREETING INLINE EDITOR
+// ═══════════════════════════════════════════════════════════
+
+function openGreetingEdit() {
+  // Pre-fill with current values
+  const nameEl = document.getElementById('ge-name');
+  const subEl  = document.getElementById('ge-subtitle');
+  if(nameEl) nameEl.value = appSettings.name || currentUser?.displayName || '';
+  if(subEl)  subEl.value  = appSettings.greetingSubtitle || '';
+  updateGreetingEditPreview();
+  document.getElementById('greeting-edit-modal').classList.add('open');
+  setTimeout(() => nameEl?.focus(), 80);
+}
+
+function updateGreetingEditPreview() {
+  const name = document.getElementById('ge-name')?.value.trim() || 'Trader';
+  const sub  = document.getElementById('ge-subtitle')?.value || '';
+  const hour = new Date().getHours();
+  const tod  = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+  const emoji = appSettings.greetingEmojiSkinTone || appSettings.greetingEmoji || '👋';
+  const titleEl = document.getElementById('ge-preview-title');
+  const subPrev = document.getElementById('ge-preview-sub');
+  if(titleEl) titleEl.textContent = 'Good ' + tod + ', ' + name + ' ' + emoji;
+  if(subPrev) subPrev.textContent = sub || 'Ready to execute with discipline and precision.';
+}
+
+function saveGreetingEdit() {
+  const name = document.getElementById('ge-name')?.value.trim() || '';
+  const sub  = document.getElementById('ge-subtitle')?.value.trim() || '';
+
+  if(name) {
+    appSettings.name = name;
+    // Update display name shown in topbar
+    if(currentUser) currentUser.displayName = name;
+    const nameEl   = document.getElementById('user-display-name');
+    const ddNameEl = document.getElementById('user-dd-name');
+    const avatarEl = document.getElementById('user-avatar-icon');
+    if(nameEl)   nameEl.textContent   = name;
+    if(ddNameEl) ddNameEl.textContent = name;
+    if(avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+    // Also update the Settings name field if visible
+    const sNameEl = document.getElementById('s-name');
+    if(sNameEl) sNameEl.value = name;
+  }
+  if(sub !== undefined) appSettings.greetingSubtitle = sub;
+
+  // Refresh the home screen greeting immediately
+  const hour = new Date().getHours();
+  const tod  = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+  const emoji = appSettings.greetingEmojiSkinTone || appSettings.greetingEmoji || '👋';
+  const greetEl = document.getElementById('hgreet');
+  const subEl   = document.getElementById('h-sub');
+  if(greetEl) greetEl.textContent = 'Good ' + tod + ', ' + (appSettings.name || 'Trader') + ' ' + emoji;
+  if(subEl && appSettings.greetingSubtitle) subEl.textContent = appSettings.greetingSubtitle;
+
+  saveCurrentUserData();
+  closeModal('greeting-edit-modal');
+  showNotif('Greeting updated ✨', 'Your home screen greeting has been saved', 'success');
+}
+
 
 function showNotif(title,msg,type='info'){const stack=document.getElementById('notif-stack');if(!stack)return;const id='n'+nid++;const tc={info:'',danger:'nd',success:'ns',warn:'nw'};const div=document.createElement('div');div.className=`notif ${tc[type]||''}`;div.id=id;div.innerHTML=`<div style="flex:1"><div style="font-size:12px;font-weight:600;margin-bottom:2px">${title}</div>${msg?`<div style="font-size:11px;color:var(--text2);line-height:1.4">${msg}</div>`:''}</div><div style="color:var(--text3);font-size:14px;cursor:pointer;flex-shrink:0" onclick="document.getElementById('${id}').remove()">×</div>`;stack.appendChild(div);setTimeout(()=>{const e=document.getElementById(id);if(e){e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(()=>{const x=document.getElementById(id);if(x)x.remove();},300);}},6000);}
 
