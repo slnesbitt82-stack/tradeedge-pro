@@ -1643,6 +1643,24 @@ tr:hover td{background:rgba(255,255,255,.015)}
           <div class="card"><div class="sec">Equity Curve</div><div class="ch"><canvas id="c-eq"></canvas></div></div>
           <div class="card"><div class="sec">By Asset Class</div><div id="db-asset"></div></div>
         </div>
+
+        <!-- Withdrawals card -->
+        <div class="card" style="margin-top:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div>
+              <div class="sec" style="margin-bottom:2px">💸 Withdrawals</div>
+              <div style="font-size:11px;color:var(--text2)">Amounts withdrawn reduce your account balance and total P&L display</div>
+            </div>
+            <button class="btn btn-g btn-sm" style="color:var(--gold);border-color:rgba(255,193,7,.3)" onclick="openWithdrawalModal()">+ Record Withdrawal</button>
+          </div>
+          <div id="db-withdrawals">
+            <div style="text-align:center;color:var(--text3);padding:20px;font-size:12px">No withdrawals recorded</div>
+          </div>
+          <div id="db-withdrawal-total" style="display:none;border-top:1px solid var(--bdr);padding-top:10px;margin-top:4px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px;font-weight:600;color:var(--text2)">Total Withdrawn</span>
+            <span style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--gold)" id="db-withdrawal-sum">$0.00</span>
+          </div>
+        </div>
       </div>
 
       <!-- ═══ CALENDAR ═══ -->
@@ -2079,10 +2097,25 @@ tr:hover td{background:rgba(255,255,255,.015)}
               <span style="color:var(--cyan)">date,time,symbol,asset_class,direction,entry,exit,quantity,contract_multiplier,fee,setup,tags,notes,option_type,strike,expiry,underlying</span><br>
               <span style="color:var(--green)">2025-03-14,10:15,SPY250321C450,Options,Long,3.50,6.20,5,100,0,Breakout,breakout,,Call,450,2025-03-21,SPY</span>
             </div>
-            <div style="background:var(--bg3);border-radius:7px;padding:10px 12px;font-family:var(--mono);font-size:10px;color:var(--text2);overflow-x:auto;white-space:nowrap;margin-bottom:14px;line-height:2">
+            <div style="background:var(--bg3);border-radius:7px;padding:10px 12px;font-family:var(--mono);font-size:10px;color:var(--text2);overflow-x:auto;white-space:nowrap;margin-bottom:6px;line-height:2">
               <span style="color:var(--text3)"># Combined date+time in one column (broker export style)</span><br>
               <span style="color:var(--cyan)">date,symbol,asset_class,direction,entry,exit,quantity,fee,notes</span><br>
               <span style="color:var(--green)">2025-03-14 09:32:00,MYMH6,Futures,Long,21800,21850,2,1.50,Good breakout</span>
+            </div>
+
+            <!-- Tradovate format -->
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;margin-top:8px">
+              <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--purple);background:rgba(179,136,255,.1);border:1px solid rgba(179,136,255,.25);border-radius:5px;padding:2px 7px">Tradovate</span>
+              <span style="font-size:11px;color:var(--text2)">Import directly from Tradovate Performance export</span>
+            </div>
+            <div style="background:var(--bg3);border-radius:7px;padding:10px 12px;font-family:var(--mono);font-size:10px;color:var(--text2);overflow-x:auto;white-space:nowrap;margin-bottom:6px;line-height:2">
+              <span style="color:var(--text3)"># Tradovate Performance CSV — import as-is, no reformatting needed</span><br>
+              <span style="color:var(--cyan)">symbol,_priceFormat,_priceFormatType,_tickSize,buyFillId,sellFillId,qty,buyPrice,sellPrice,pnl,boughtTimestamp,soldTimestamp,duration</span><br>
+              <span style="color:var(--green)">MESM6,-2,0,0.25,14146938599,14146938579,2,7166.50,7157.00,$(95.00),04/21/2026 09:52:47,04/21/2026 09:46:22,6min 24sec</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:14px;line-height:1.7">
+              Direction is auto-detected from timestamps. Multiplier is auto-detected from symbol
+              (MES=5, MNQ=2, MYM=0.5, ES=50, NQ=20…). P&amp;L format <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">$(95.00)</code> is parsed automatically.
             </div>
 
             <!-- Field reference -->
@@ -3912,7 +3945,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
         </select>
       </div>
       <div class="g2">
-        <div class="fg"><label>Starting Balance ($)</label><input id="am-acc-balance" type="number" value="50000" min="0"></div>
+        <div class="fg"><label>Starting Balance ($) <span style="font-size:10px;color:var(--text3);font-weight:400">— enter 0 for funded/prop accounts</span></label><input id="am-acc-balance" type="number" value="50000" min="0" placeholder="e.g. 50000 or 0 for prop"></div>
         <div class="fg"><label>Currency</label>
           <select id="am-acc-currency">
             <option value="$">$ USD</option><option value="€">€ EUR</option>
@@ -3937,6 +3970,36 @@ tr:hover td{background:rgba(255,255,255,.015)}
   </div>
 
   <!-- Alert Modal -->
+  <!-- Withdrawal Modal -->
+<div class="modal-bg" id="withdrawal-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <span>💸 Record Withdrawal</span>
+      <button class="modal-close" onclick="closeModal('withdrawal-modal')">×</button>
+    </div>
+    <div style="background:rgba(255,193,7,.07);border:1px solid rgba(255,193,7,.2);border-radius:9px;padding:10px 13px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+      Withdrawals are subtracted from your account balance and reflected in your P&L display.
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Amount ($)</label>
+      <input id="wd-amount" type="number" min="0.01" step="0.01" placeholder="e.g. 5000">
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Date</label>
+      <input id="wd-date" type="date">
+    </div>
+    <div class="fg" style="margin-bottom:14px">
+      <label>Note <span style="font-size:10px;color:var(--text3);font-weight:400">(optional)</span></label>
+      <input id="wd-note" type="text" placeholder="e.g. Monthly profit withdrawal">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="flex:1;justify-content:center;background:rgba(255,193,7,.12);border:1px solid rgba(255,193,7,.3);color:var(--gold)" onclick="saveWithdrawal()">Record Withdrawal</button>
+      <button class="btn btn-g" onclick="closeModal('withdrawal-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
   <!-- Greeting Edit Modal -->
 <div class="modal-bg" id="greeting-edit-modal">
   <div class="modal" style="max-width:440px">
@@ -4359,8 +4422,8 @@ const ACC_COLORS=['#00d4ff','#00e676','#b388ff','#ffc107','#ff9800','#f06292','#
 const ACC_TYPE_LABELS={live:'Live',demo:'Demo',prop:'Prop Firm',paper:'Paper',options:'Options'};
 
 let accounts=[
-  {id:'acc-1',name:'Main Futures',broker:'Tradovate',type:'live',balance:50000,currency:'$',lossLimit:500,profitTarget:1000,color:'#00d4ff',createdAt:'2025-01-01'},
-  {id:'acc-2',name:'Prop Firm',broker:'Apex Trader',type:'prop',balance:100000,currency:'$',lossLimit:2000,profitTarget:3000,color:'#b388ff',createdAt:'2025-02-01'},
+  {id:'acc-1',name:'Main Futures',broker:'Tradovate',type:'live',balance:50000,currency:'$',lossLimit:500,profitTarget:1000,color:'#00d4ff',createdAt:'2025-01-01',withdrawals:[]},
+  {id:'acc-2',name:'Prop Firm',broker:'Apex Trader',type:'prop',balance:100000,currency:'$',lossLimit:2000,profitTarget:3000,color:'#b388ff',createdAt:'2025-02-01',withdrawals:[]},
 ];
 let activeAccountId='acc-1';
 let editingAccountId=null;
@@ -4525,6 +4588,11 @@ function totP(accountId){
   const acct=accountId||activeAccountId;
   return Math.round(getAccountTrades(acct).reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
 }
+function totWithdrawals(accountId){
+  const acct = accounts.find(a=>a.id===(accountId||activeAccountId)) || getActiveAccount();
+  if(!acct.withdrawals || !acct.withdrawals.length) return 0;
+  return Math.round(acct.withdrawals.reduce((s,w)=>s+w.amount,0)*100)/100;
+}
 function monT(accountId){const acct=accountId||activeAccountId;const p=`${calYr}-${String(calMon+1).padStart(2,'0')}`;return trades.filter(t=>t.date.startsWith(p)&&t.accountId===acct);}
 
 // ═══════════════════════════════════════
@@ -4579,7 +4647,7 @@ function initHome(){
   tickClock();if(!window._ci)window._ci=setInterval(tickClock,1000);
   document.getElementById('aff-txt').textContent=AFFS[affIdx];
   document.getElementById('hmood').innerHTML=[...POS_EMO,...NEG_EMO].map(e=>`<div class="mood-pill ${selMoods.has(e)?POS_EMO.includes(e)?'ps':'ns':''}" onclick="togMood('${e}',this)">${e}</div>`).join('');
-  const acct=getActiveAccount();const tot=totP();const bal=acct.balance+tot;
+  const acct=getActiveAccount();const tot=totP();const withdrawn=totWithdrawals();const bal=(acct.balance != null ? acct.balance : 0)+tot-withdrawn;
   const cur=acct.currency||appSettings.currency||'$';
   document.getElementById('h-stats').innerHTML=[
     {l:'Balance',v:cur+bal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),c:'neu'},
@@ -4813,7 +4881,7 @@ function playDNTSound(){
 // DASHBOARD
 // ═══════════════════════════════════════
 function initDashboard(){
-  const activeAcct=getActiveAccount();const tot=totP();const bal=activeAcct.balance+tot;
+  const activeAcct=getActiveAccount();const tot=totP();const withdrawn=totWithdrawals();const bal=activeAcct.balance+tot-withdrawn;
   const wins=getAccountTrades().filter(t=>Pnet(t)>0),losses=getAccountTrades().filter(t=>Pnet(t)<0);
   const grossW=Math.round(wins.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
   const grossL=Math.abs(Math.round(losses.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100);
@@ -4823,13 +4891,18 @@ function initDashboard(){
   const wrPct=wr(trades);
   const accCur=activeAcct.currency||appSettings.currency||'$';
   document.getElementById('db-bal').textContent=accCur+bal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-  document.getElementById('db-bsub').textContent=fdSum(tot)+' all-time | '+activeAcct.name;
+  document.getElementById('db-bsub').textContent=fdSum(tot)+' P&L'+(withdrawn?' · '+fdSum(-withdrawn)+' withdrawn':'')+'  |  '+activeAcct.name;
   const pe=document.getElementById('db-pnl');pe.textContent=fdSum(tot);pe.className='kv '+(tot>=0?'pos':'neg');
   document.getElementById('db-pb').style.width=Math.min(100,Math.abs(tot)/3500*100).toFixed(0)+'%';
   document.getElementById('db-pb').style.background=tot>=0?'var(--green)':'var(--red)';
   document.getElementById('db-psub').textContent=Math.min(100,Math.abs(tot)/3500*100).toFixed(0)+'% to target';
-  document.getElementById('db-prof').textContent=(tot/((activeAcct.balance||50000)/100)).toFixed(2)+'%';
-  document.getElementById('db-prosub').textContent='On '+accCur+(activeAcct.balance||50000).toLocaleString()+' base';
+  const profBase = (activeAcct.balance > 0) ? activeAcct.balance : null;
+  document.getElementById('db-prof').textContent = profBase
+    ? (tot/(profBase/100)).toFixed(2)+'%'
+    : '—';
+  document.getElementById('db-prosub').textContent = profBase
+    ? 'On '+accCur+profBase.toLocaleString()+' base'
+    : 'Prop account (no base balance)';
   document.getElementById('db-wr').textContent=wrPct+'%';
   document.getElementById('db-wrb').style.width=wrPct+'%';
   document.getElementById('db-wrsub').textContent=wins.length+'W / '+losses.length+'L of '+trades.length;
@@ -4837,13 +4910,14 @@ function initDashboard(){
   document.getElementById('db-al').textContent='-$'+avgL.toFixed(2);
   document.getElementById('db-pf').textContent=pf;
   const ab=document.getElementById('db-asset');ab.innerHTML='';
+  renderWithdrawals();
   ['Futures','Forex','Stocks','Crypto','Options'].forEach(a=>{
     const at=getAccountTrades().filter(t=>t.asset===a);
     const ap=Math.round(at.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
     ab.innerHTML+=`<div class="mr"><div><div style="font-size:12px;font-weight:500">${a}</div><div style="font-size:10px;color:var(--text3)">${at.length} trades · ${wr(at)}% WR</div></div><div style="font-family:var(--mono);font-size:12px;${ap>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(ap)}</div></div>`;
   });
   if(charts_.eq)charts_.eq.destroy();
-  const sorted=getAccountTrades().sort((a,b)=>a.date.localeCompare(b.date));let run=activeAcct.balance||50000;
+  const sorted=getAccountTrades().sort((a,b)=>a.date.localeCompare(b.date));let run=((activeAcct.balance != null ? activeAcct.balance : 50000))-totWithdrawals();
   charts_.eq=new Chart(document.getElementById('c-eq').getContext('2d'),{type:'line',data:{labels:sorted.map(t=>t.date.slice(5)),datasets:[{data:sorted.map(t=>{run+=Pnet(t);return run;}),borderColor:'#00d4ff',backgroundColor:'rgba(0,212,255,0.05)',fill:true,tension:0.4,pointRadius:2,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#3d5068',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#3d5068',font:{size:9},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,.04)'}}}}});
 }
 
@@ -6413,15 +6487,17 @@ function handleCSV(inp){
     function parseCSVDate(raw){
       if(!raw) return new Date().toISOString().slice(0,10);
       raw = raw.trim();
-      // Already ISO: 2025-03-14 or 2025-03-14T09:30 or 2025-03-14 09:30:00
+      // Already ISO: 2025-03-14
       if(/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0,10);
-      // MM/DD/YYYY or MM-DD-YYYY
-      const mdy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+      // MM/DD/YYYY HH:MM:SS (Tradovate/combined) — strip time part first
+      const mdyFull = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if(mdyFull) return mdyFull[3]+'-'+mdyFull[1].padStart(2,'0')+'-'+mdyFull[2].padStart(2,'0');
+      // MM-DD-YYYY
+      const mdy = raw.match(/^(\d{1,2})\-(\d{1,2})\-(\d{4})/);
       if(mdy) return mdy[3]+'-'+mdy[1].padStart(2,'0')+'-'+mdy[2].padStart(2,'0');
       // DD-MM-YYYY (European)
       const dmy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
       if(dmy && parseInt(dmy[1])>12) return (dmy[3].length===2?'20'+dmy[3]:dmy[3])+'-'+dmy[2].padStart(2,'0')+'-'+dmy[1].padStart(2,'0');
-      // Fallback
       return new Date().toISOString().slice(0,10);
     }
 
@@ -6445,12 +6521,50 @@ function handleCSV(inp){
     }
 
     function splitDateTime(dateRaw, timeRaw){
-      // If dateRaw contains a space or T, it may be a combined datetime
       if(dateRaw && /[ T]\d{1,2}:\d{2}/.test(dateRaw)){
-        const parts = dateRaw.split(/[ T]/);
-        return { date: parseCSVDate(parts[0]), time: parseCSVTime(parts.slice(1).join(' ')) };
+        // Combined datetime like "04/21/2026 09:52:47" or "2026-04-21T09:52"
+        const spaceIdx = dateRaw.search(/[ T]\d{1,2}:/);
+        const datePart = dateRaw.slice(0, spaceIdx);
+        const timePart = dateRaw.slice(spaceIdx + 1);
+        return { date: parseCSVDate(datePart), time: parseCSVTime(timePart) };
       }
       return { date: parseCSVDate(dateRaw), time: parseCSVTime(timeRaw) };
+    }
+
+    // Parse Tradovate-style P&L: "$(95.00)" → -95, "$95.00" → 95, "-95" → -95
+    function parsePnl(raw){
+      if(!raw) return null;
+      raw = raw.toString().trim();
+      const neg = raw.startsWith('$(') || raw.startsWith('-');
+      const num = parseFloat(raw.replace(/[\$\(\),\s]/g,''));
+      if(isNaN(num)) return null;
+      return neg ? -num : num;
+    }
+
+    // Guess multiplier from symbol name (common futures)
+    function guessMultiplier(sym){
+      const s = sym.toUpperCase();
+      // MES variants
+      if(/^MES/.test(s)) return 5;
+      if(/^MNQ/.test(s)) return 2;
+      if(/^MYM/.test(s)) return 0.5;
+      if(/^M2K/.test(s)) return 5;
+      // Full-size
+      if(/^ES/.test(s))  return 50;
+      if(/^NQ/.test(s))  return 20;
+      if(/^YM/.test(s))  return 5;
+      if(/^RTY/.test(s)) return 50;
+      // Metals
+      if(/^MGC/.test(s)) return 10;
+      if(/^GC/.test(s))  return 100;
+      if(/^SI/.test(s))  return 5000;
+      // Energy
+      if(/^MCL/.test(s)) return 100;
+      if(/^CL/.test(s))  return 1000;
+      // Micro crypto
+      if(/^MBT/.test(s)) return 2.5;
+      if(/^BTC/.test(s)) return 25;
+      return null; // unknown — fall back to user's account/column value
     }
 
     for(let i = 1; i < lines.length; i++){
@@ -6459,35 +6573,117 @@ function handleCSV(inp){
       const row = {};
       hdrs.forEach((h,idx) => row[h] = (v[idx]||'').trim().replace(/^"|"$/g,''));
       try{
-        const en   = parseFloat(row.entry);
-        const ex   = parseFloat(row.exit);
-        const qty  = parseFloat(row.quantity||row.qty||1) || 1;
-        const mult = parseFloat(row.contract_multiplier||row.multiplier||row.mult||1) || 1;
-        if(isNaN(en)||!en||isNaN(ex)||!ex){
-          errs++; errDetails.push('Row '+i+': invalid entry/exit prices'); continue;
+        const sym = (row.symbol || row.instrument || row.ticker || 'UNKNOWN').toUpperCase();
+
+        // ── Broker export format detection ─────────────────────────
+        // Detects: Tradovate / Tradovate-style exports with columns:
+        //   buyPrice, sellPrice, boughtTimestamp, soldTimestamp, qty, pnl, _tickSize
+        const isTradovate = row.buyprice   !== undefined || row.buytimestamp !== undefined ||
+                            row.boughttimestamp !== undefined || row.buyfillid !== undefined;
+
+        let en, ex, normDir, parsedDate, parsedTime;
+
+        if(isTradovate) {
+          const buyPrice  = parseFloat(row.buyprice  || row.buyfillprice  || 0);
+          const sellPrice = parseFloat(row.sellprice || row.sellfillprice || 0);
+
+          // Timestamps — Tradovate uses boughtTimestamp / soldTimestamp
+          const buyTs  = row.boughttimestamp || row.buytimestamp  || row.buytime  || '';
+          const sellTs = row.soldtimestamp   || row.selltimestamp || row.selltime || '';
+
+          // Determine direction: if sell timestamp is earlier than buy → Short (sold first)
+          let isShort = false;
+          if(buyTs && sellTs) {
+            const toISO = ts => {
+              // "MM/DD/YYYY HH:MM:SS" → sortable ISO
+              const m = ts.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}:\d{2}:\d{2})/);
+              if(m) return m[3]+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0')+'T'+m[4];
+              return ts;
+            };
+            isShort = toISO(sellTs) < toISO(buyTs);
+          } else if(buyTs && !sellTs) {
+            isShort = false;
+          } else if(sellTs && !buyTs) {
+            isShort = true;
+          }
+
+          normDir = isShort ? 'Short' : 'Long';
+
+          // Long: entry=buyPrice, exit=sellPrice
+          // Short: entry=sellPrice (open), exit=buyPrice (close)
+          en = isShort ? sellPrice : buyPrice;
+          ex = isShort ? buyPrice  : sellPrice;
+
+          // Use the OPEN (entry) timestamp for date/time
+          const openTs = isShort ? sellTs : buyTs;
+          const dtSplit = splitDateTime(openTs, '');
+          parsedDate = dtSplit.date;
+          parsedTime = dtSplit.time;
+
+          // ── Multiplier from tickSize + known tick values ─────────────
+          // If the CSV has _tickSize, derive mult from symbol or tickSize
+          // Tradovate _priceFormat / _tickSize approach:
+          //   - If guessMultiplier finds a match, use it (most reliable)
+          //   - Otherwise try: mult = pnl_dollars / (price_diff * qty)
+          const csvTickSize = parseFloat(row._ticksize || row.ticksize || row.tick_size || 0);
+          const pnlRaw = parsePnl(row.pnl || row.pnl1 || '');
+          const sym2 = (row.symbol || '').toUpperCase();
+          const guessedMult = guessMultiplier(sym2);
+
+          if(guessedMult) {
+            // Symbol-based lookup is most reliable
+            row._resolvedMult = guessedMult;
+          } else if(pnlRaw !== null && Math.abs(en - ex) > 0) {
+            // Back-calculate: mult = pnl / (priceDiff * qty)
+            const qtyRaw = parseFloat(row.qty || row.quantity || 1) || 1;
+            const priceDiff = isShort ? (en - ex) : (ex - en); // should be positive for wins
+            const calcMult = Math.abs(pnlRaw) / (Math.abs(priceDiff) * qtyRaw);
+            if(calcMult > 0 && calcMult < 100000) row._resolvedMult = Math.round(calcMult * 100) / 100;
+          }
+
+        } else {
+          // ── Standard TradeEdge Pro format ──────────────────────────
+          en = parseFloat(row.entry);
+          ex = parseFloat(row.exit);
+          if(isNaN(en)||!en||isNaN(ex)||!ex){
+            errs++; errDetails.push('Row '+i+': invalid entry/exit prices'); continue;
+          }
+          const dir = (row.direction || row.dir || 'Long');
+          let nd = dir.charAt(0).toUpperCase() + dir.slice(1).toLowerCase();
+          if(nd.charAt(0)==='B' || nd==='Long') nd='Long';
+          else if(nd.charAt(0)==='S' && nd!=='Short') nd='Short';
+          if(!['Long','Short'].includes(nd)) nd = nd.toLowerCase().includes('s')?'Short':'Long';
+          normDir = nd;
+          const dtSplit = splitDateTime(
+            row.date||row.datetime||row.trade_date||row.tradedate||row.entry_date||'',
+            row.time||row.entry_time||row.trade_time||''
+          );
+          parsedDate = dtSplit.date;
+          parsedTime = dtSplit.time;
         }
-        const dir = (row.direction||row.dir||'Long');
-        // Accept Long/Short, Buy/Sell, B/S, L/S
-        let normDir = dir.charAt(0).toUpperCase() + dir.slice(1).toLowerCase();
-        if(['Buy','B','Long'].includes(normDir.charAt(0).toUpperCase()+normDir.slice(1))) normDir = 'Long';
-        if(['Sell','S','Short'].includes(normDir.charAt(0).toUpperCase()+normDir.slice(1))) normDir = 'Short';
-        if(!['Long','Short'].includes(normDir)) normDir = normDir.toLowerCase().includes('s') ? 'Short' : 'Long';
-        const _csvAsset = row.asset_class || row.asset || 'Stocks';
+
+        if(!en || !ex) { errs++; errDetails.push('Row '+i+': could not determine entry/exit'); continue; }
+
+        const qty  = parseFloat(row.quantity||row.qty||1) || 1;
+
+        // Multiplier: pre-resolved (Tradovate back-calc) → column value → symbol → 1
+        let mult = row._resolvedMult ||
+                   parseFloat(row.contract_multiplier||row.multiplier||row.mult||0) || 0;
+        if(!mult) mult = guessMultiplier(sym) || 1;
+
+        const _csvAsset = row.asset_class || row.asset || (guessMultiplier(sym) ? 'Futures' : 'Stocks');
         const _csvIsOpt = _csvAsset === 'Options';
-        const { date: parsedDate, time: parsedTime } = splitDateTime(
-          row.date||row.datetime||row.trade_date||row.tradedate||row.entry_date||'',
-          row.time||row.datetime_time||row.entry_time||row.entrytime||row.trade_time||''
-        );
+
         trades.push({
           id: base + i,
           accountId: activeAccountId,
           date: parsedDate,
           time: parsedTime,
-          symbol: (row.symbol||'UNKNOWN').toUpperCase(),
+          symbol: sym,
           asset: _csvAsset,
-          dir: ['Long','Short'].includes(normDir) ? normDir : 'Long',
+          dir: normDir,
           entry: en, exit: ex, qty,
-          mult: _csvIsOpt ? (parseFloat(row.contract_multiplier||row.multiplier||row.mult||100)||100) : (parseFloat(row.contract_multiplier||row.multiplier||row.mult||1)||1),
+          mult: _csvIsOpt ? (parseFloat(row.contract_multiplier||row.multiplier||row.mult||100)||100) : mult,
           fee: parseFloat(row.fee||row.commission||0)||0,
           optionType: _csvIsOpt ? (row.option_type||row.optiontype||row.type||'Call') : undefined,
           strike:     _csvIsOpt ? parseFloat(row.strike||0) : undefined,
@@ -7074,7 +7270,7 @@ function openAddAccountModal(editId){
   document.getElementById('am-acc-name').value=acct?.name||'';
   document.getElementById('am-acc-broker').value=acct?.broker||'';
   document.getElementById('am-acc-type').value=acct?.type||'live';
-  document.getElementById('am-acc-balance').value=acct?.balance||50000;
+  document.getElementById('am-acc-balance').value = (acct && acct.balance != null) ? acct.balance : 50000;
   document.getElementById('am-acc-currency').value=acct?.currency||'$';
   document.getElementById('am-acc-loss').value=acct?.lossLimit||500;
   document.getElementById('am-acc-target').value=acct?.profitTarget||1000;
@@ -7105,7 +7301,12 @@ function saveAccountModal(){
     name,
     broker:document.getElementById('am-acc-broker').value.trim(),
     type:document.getElementById('am-acc-type').value,
-    balance:parseFloat(document.getElementById('am-acc-balance').value)||50000,
+    balance:(function(){
+      const raw = document.getElementById('am-acc-balance').value;
+      const v   = parseFloat(raw);
+      return (!isNaN(v) && v >= 0) ? v : 50000;
+    })(),
+    withdrawals: editingAccountId ? (accounts.find(a=>a.id===editingAccountId)?.withdrawals || []) : [],
     currency:document.getElementById('am-acc-currency').value,
     lossLimit:parseFloat(document.getElementById('am-acc-loss').value)||500,
     profitTarget:parseFloat(document.getElementById('am-acc-target').value)||1000,
@@ -7765,7 +7966,8 @@ function goalProgress(g) {
     if(g.pnlUnit === 'percent'){
       // Percent mode: compare pnl as % of starting account balance
       const acct = getActiveAccount();
-      const startBal = (acct?.balance || 50000);
+      const startBal = (acct && acct.balance > 0) ? acct.balance : null;
+      if(!startBal) { pct=0; label='N/A (no base balance)'; return {pct,label,color}; }
       const pnlPct = startBal > 0 ? Math.round(pnl / startBal * 1000) / 10 : 0; // 1dp
       current = pnlPct;
       pct     = tgt > 0 ? pnlPct / tgt * 100 : 0;
@@ -12207,6 +12409,94 @@ function saveGreetingEdit() {
   saveCurrentUserData();
   closeModal('greeting-edit-modal');
   showNotif('Greeting updated ✨', 'Your home screen greeting has been saved', 'success');
+}
+
+
+
+// ═══════════════════════════════════════════════════════════
+// WITHDRAWALS
+// ═══════════════════════════════════════════════════════════
+
+function openWithdrawalModal() {
+  document.getElementById('wd-amount').value = '';
+  document.getElementById('wd-date').value   = new Date().toISOString().slice(0,10);
+  document.getElementById('wd-note').value   = '';
+  document.getElementById('withdrawal-modal').classList.add('open');
+  setTimeout(() => document.getElementById('wd-amount').focus(), 80);
+}
+
+function saveWithdrawal() {
+  const amount = parseFloat(document.getElementById('wd-amount').value);
+  const date   = document.getElementById('wd-date').value || new Date().toISOString().slice(0,10);
+  const note   = document.getElementById('wd-note').value.trim();
+
+  if(!amount || amount <= 0) {
+    showNotif('Invalid amount', 'Enter a withdrawal amount greater than zero', 'danger');
+    return;
+  }
+
+  const acct = getActiveAccount();
+  if(!acct) return;
+  if(!acct.withdrawals) acct.withdrawals = [];
+
+  acct.withdrawals.push({
+    id:     Date.now(),
+    date:   date,
+    amount: Math.round(amount * 100) / 100,
+    note:   note,
+  });
+
+  // Sort by date descending
+  acct.withdrawals.sort((a,b) => b.date.localeCompare(a.date));
+
+  closeModal('withdrawal-modal');
+  renderWithdrawals();
+  initDashboard();
+  saveCurrentUserData();
+  showNotif('Withdrawal recorded 💸', fdSum(-amount) + ' on ' + date, 'info');
+}
+
+function deleteWithdrawal(acctId, wdId) {
+  const acct = accounts.find(a => a.id === acctId);
+  if(!acct || !acct.withdrawals) return;
+  showConfirm('🗑 Delete Withdrawal?', 'Remove this withdrawal record?', 'var(--red)', function() {
+    acct.withdrawals = acct.withdrawals.filter(w => w.id !== wdId);
+    renderWithdrawals();
+    initDashboard();
+    saveCurrentUserData();
+    showNotif('Withdrawal removed', '', 'info');
+  });
+}
+
+function renderWithdrawals() {
+  const el    = document.getElementById('db-withdrawals');
+  const totEl = document.getElementById('db-withdrawal-total');
+  const sumEl = document.getElementById('db-withdrawal-sum');
+  if(!el) return;
+
+  const acct = getActiveAccount();
+  const wds  = acct?.withdrawals || [];
+  const cur  = acct?.currency || '$';
+
+  if(!wds.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px;font-size:12px">No withdrawals recorded for this account</div>';
+    if(totEl) totEl.style.display = 'none';
+    return;
+  }
+
+  el.innerHTML = wds.map(w => `
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bdr)">
+      <div style="font-size:18px;flex-shrink:0">💸</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--gold)">${cur}${w.amount.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <div style="font-size:11px;color:var(--text2)">${w.date}${w.note ? ' · ' + w.note : ''}</div>
+      </div>
+      <button class="ic-btn del" onclick="deleteWithdrawal('${acct.id}',${w.id})" title="Delete">✕</button>
+    </div>`).join('');
+
+  const total = wds.reduce((s,w) => s + w.amount, 0);
+  if(totEl) totEl.style.display = 'flex';
+  if(sumEl) sumEl.textContent = '-' + cur + total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
 
