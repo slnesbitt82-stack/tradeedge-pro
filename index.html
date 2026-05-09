@@ -4882,13 +4882,14 @@ function playDNTSound(){
 // ═══════════════════════════════════════
 function initDashboard(){
   const activeAcct=getActiveAccount();const tot=totP();const withdrawn=totWithdrawals();const bal=activeAcct.balance+tot-withdrawn;
-  const wins=getAccountTrades().filter(t=>Pnet(t)>0),losses=getAccountTrades().filter(t=>Pnet(t)<0);
+  const acctTrades=getAccountTrades();
+  const wins=acctTrades.filter(t=>Pnet(t)>0),losses=acctTrades.filter(t=>Pnet(t)<0);
   const grossW=Math.round(wins.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
   const grossL=Math.abs(Math.round(losses.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100);
   const avgW=wins.length?grossW/wins.length:0;
   const avgL=losses.length?grossL/losses.length:0;
   const pf=grossL>0?(grossW/grossL).toFixed(2):'∞';
-  const wrPct=wr(trades);
+  const wrPct=wr(acctTrades);
   const accCur=activeAcct.currency||appSettings.currency||'$';
   document.getElementById('db-bal').textContent=accCur+bal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   document.getElementById('db-bsub').textContent=fdSum(tot)+' P&L'+(withdrawn?' · '+fdSum(-withdrawn)+' withdrawn':'')+'  |  '+activeAcct.name;
@@ -4905,7 +4906,7 @@ function initDashboard(){
     : 'Prop account (no base balance)';
   document.getElementById('db-wr').textContent=wrPct+'%';
   document.getElementById('db-wrb').style.width=wrPct+'%';
-  document.getElementById('db-wrsub').textContent=wins.length+'W / '+losses.length+'L of '+trades.length;
+  document.getElementById('db-wrsub').textContent=wins.length+'W / '+losses.length+'L of '+acctTrades.length;
   document.getElementById('db-aw').textContent='+$'+avgW.toFixed(2);
   document.getElementById('db-al').textContent='-$'+avgL.toFixed(2);
   document.getElementById('db-pf').textContent=pf;
@@ -5582,12 +5583,13 @@ function renderACharts(){
   });
 }
 function renderAStats(){
-  const wins=trades.filter(t=>Pnet(t)>0),losses=trades.filter(t=>Pnet(t)<0);
+  const acctT=getAccountTrades();
+  const wins=acctT.filter(t=>Pnet(t)>0),losses=acctT.filter(t=>Pnet(t)<0);
   const grossW=Math.round(wins.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100;
   const grossL=Math.abs(Math.round(losses.reduce((s,t)=>s+Math.round(Pnet(t)*100),0))/100);
   const avgW=wins.length?grossW/wins.length:0;
   const avgL=losses.length?grossL/losses.length:0;
-  const allPnls=trades.map(t=>Pnet(t));
+  const allPnls=acctT.map(t=>Pnet(t));
   document.getElementById('s-lw').textContent=wins.length?'+$'+Math.max(...wins.map(t=>Pnet(t))).toFixed(2):'—';
   document.getElementById('s-ll').textContent=losses.length?'-$'+Math.abs(Math.min(...losses.map(t=>Pnet(t)))).toFixed(2):'—';
   document.getElementById('s-aw').textContent='+$'+avgW.toFixed(2);
