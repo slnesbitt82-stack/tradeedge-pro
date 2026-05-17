@@ -5777,28 +5777,34 @@ function bulkClearSelection() {
 function bulkDeleteTrades() {
   const n = _bulkSelected.size;
   if(!n) return;
-  if(!confirm(`Delete ${n} selected trade${n!==1?'s':''}? This cannot be undone.`)) return;
+  showConfirm(
+    '🗑 Delete ' + n + ' Trade' + (n !== 1 ? 's' : '') + '?',
+    'Permanently delete ' + n + ' selected trade' + (n !== 1 ? 's' : '') + '? This cannot be undone.',
+    'var(--red)',
+    function() {
+      // Close detail panel if its trade is being deleted
+      if(activeTdpId && _bulkSelected.has(activeTdpId)) {
+        activeTdpId = null;
+        const wrap = document.getElementById('trade-detail-panel-wrap');
+        if(wrap) wrap.innerHTML = '';
+      }
 
-  // Close detail panel if its trade is being deleted
-  if(activeTdpId && _bulkSelected.has(activeTdpId)) {
-    activeTdpId = null;
-    const wrap = document.getElementById('trade-detail-panel-wrap');
-    if(wrap) wrap.innerHTML = '';
-  }
+      // Use splice to mutate in-place (not reassign the variable)
+      const kept = trades.filter(t => !_bulkSelected.has(t.id));
+      trades.splice(0, trades.length, ...kept);
+      _bulkSelected.clear();
 
-  trades = trades.filter(t => !_bulkSelected.has(t.id));
-  _bulkSelected.clear();
+      const saEl = document.getElementById('tbl-select-all');
+      if(saEl) { saEl.checked = false; saEl.indeterminate = false; }
+      const bar = document.getElementById('bulk-bar');
+      if(bar) bar.classList.remove('show');
 
-  // Update the select-all checkbox state
-  const saEl = document.getElementById('tbl-select-all');
-  if(saEl) { saEl.checked = false; saEl.indeterminate = false; }
-  const bar = document.getElementById('bulk-bar');
-  if(bar) bar.classList.remove('show');
-
-  renderTrades();
-  // Refresh calendar if it was open so it reflects deleted trades
-  if(typeof renderCal === 'function') renderCal();
-  showNotif('Trades deleted', n + ' trade' + (n!==1?'s':'') + ' removed', 'info');
+      renderTrades();
+      saveCurrentUserData();
+      if(typeof renderCal === 'function') renderCal();
+      showNotif('Trades deleted', n + ' trade' + (n !== 1 ? 's' : '') + ' removed', 'info');
+    }
+  );
 }
 
 function renderTrades(){
@@ -6807,7 +6813,13 @@ function handleCSV(inp){
           dir: normDir,
           entry: en, exit: ex, qty,
           mult: _csvIsOpt ? (parseFloat(row.contract_multiplier||row.multiplier||row.mult||100)||100) : mult,
-          fee: parseFloat(row.fee||row.commission||0)||0,
+          fee: (function(){
+            // Use CSV fee column if present; otherwise apply default commission × qty
+            const csvFee = parseFloat(row.fee || row.commission || row.fees || 0);
+            if(csvFee) return csvFee;
+            const defComm = appSettings.commission || 0;
+            return defComm ? Math.round(defComm * qty * 100) / 100 : 0;
+          })(),
           optionType: _csvIsOpt ? (row.option_type||row.optiontype||row.type||'Call') : undefined,
           strike:     _csvIsOpt ? parseFloat(row.strike||0) : undefined,
           expiry:     _csvIsOpt ? (row.expiry||row.expiration||'') : undefined,
