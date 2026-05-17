@@ -1871,7 +1871,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
             <div class="g4" style="margin-bottom:10px">
               <div class="fg"><label id="lf-entry-lbl">Entry</label><input id="lf-entry" type="number" placeholder="0.00" oninput="calcLfPrev()"></div>
               <div class="fg"><label id="lf-exit-lbl">Exit</label><input id="lf-exit" type="number" placeholder="0.00" oninput="calcLfPrev()"></div>
-              <div class="fg"><label id="lf-qty-lbl">Qty</label><input id="lf-qty" type="number" value="1" oninput="calcLfPrev()"></div>
+              <div class="fg"><label id="lf-qty-lbl">Qty</label><input id="lf-qty" type="number" value="1" oninput="calcLfPrev();updateLogFeeHint()"></div>
               <div class="fg" id="lf-mult-wrap"><label>Multiplier</label><input id="lf-mult" type="number" value="1" step="0.01" oninput="calcLfPrev()"></div>
             </div>
             <div class="g4" style="margin-bottom:8px">
@@ -1879,6 +1879,15 @@ tr:hover td{background:rgba(255,255,255,.015)}
               <div class="fg"><label>Take Profit</label><input id="lf-tp" type="number" placeholder="0.00"></div>
               <div class="fg"><label>Date</label><input id="lf-date" type="date"></div>
               <div class="fg"><label>Time</label><input id="lf-time" type="time"></div>
+            </div>
+            <div class="fg" style="margin-bottom:8px">
+              <label>Commission / Fee ($) <span id="lf-fee-hint" style="font-size:10px;color:var(--text3);font-weight:400"></span></label>
+              <div style="display:flex;gap:6px;align-items:center">
+                <input id="lf-fee" type="number" value="0" step="0.01" min="0" placeholder="0.00" style="flex:1" oninput="calcLfPrev()">
+                <button type="button" onclick="applyDefaultCommission()" title="Auto-fill from default commission × qty"
+                  style="font-size:11px;padding:6px 10px;border-radius:7px;border:1px solid var(--bdr2);background:var(--bg3);color:var(--text2);cursor:pointer;white-space:nowrap;font-family:var(--font);transition:all .15s"
+                  id="lf-fee-auto-btn">↺ Auto</button>
+              </div>
             </div>
             <div class="pnl-prev" id="lf-prev">
               <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Est. P&L</div><div class="pnl-val" id="lf-pv">—</div></div>
@@ -2770,8 +2779,8 @@ tr:hover td{background:rgba(255,255,255,.015)}
               <div class="sec">P&L Calculation</div>
               <div class="pref-row"><div><div style="font-size:13px;font-weight:500">Include Commission in P&L</div><div style="font-size:11px;color:var(--text2)">Subtract fees from reported P&L</div></div><label class="tgl-wrap"><input type="checkbox" id="s-include-fees" checked onchange="appSettings.includeFees=this.checked;saveCurrentUserData()"><span class="tgl-track"></span></label></div>
               <div class="pref-row"><div><div style="font-size:13px;font-weight:500">Show Gross & Net P&L</div><div style="font-size:11px;color:var(--text2)">Display both before and after fees</div></div><label class="tgl-wrap"><input type="checkbox" id="s-show-gross-net"><span class="tgl-track"></span></label></div>
-              <div class="fg" style="margin-top:12px"><label>Default Commission ($ per contract/share)</label>
-                <input type="number" id="s-default-commission" value="0" step="0.01" min="0">
+              <div class="fg" style="margin-top:12px"><label>Default Commission ($ per contract/share) <span style="font-size:10px;color:var(--text3);font-weight:400">— auto-fills fee = qty × this amount when logging trades</span></label>
+                <input type="number" id="s-default-commission" value="0" step="0.01" min="0" oninput="appSettings.commission=parseFloat(this.value)||0;saveCurrentUserData();updateLogFeeFromCommission()">
               </div>
             </div>
             <div class="card">
@@ -4459,6 +4468,7 @@ const TAG_STYLE={'tc-blue':'background:rgba(0,212,255,.12);color:#00d4ff;border:
 let affIdx=Math.floor(Math.random()*AFFS.length);
 let selMoods=new Set();
 let calMon=2,calYr=2025,calSel=null,calLogDate=null,calChkSessions={};
+let calChkTradeId=null; // tracks which trade the pre-trade checklist is linked to
 let logStepCur='details',logSetupSel=null,logConf=0,logExec=0,logSelTags=new Set(),lfMedia={img:[],vid:[]};
 let alTabCur='active',nid=0,charts_={};
 let editingTagId=null,tmFilter='all',tmColorSel='tc-blue';
@@ -4723,6 +4733,13 @@ function fmtDate(d) {
   if(fmt==='DD/MM/YYYY') return `${dd2}/${mm}/${yyyy}`;
   if(fmt==='YYYY-MM-DD') return `${yyyy}-${mm}-${dd2}`;
   return `${mon} ${dd2}, ${yyyy}`;
+}
+// Parse a YYYY-MM-DD string in LOCAL time (not UTC) so .getDay()/.getDate()
+// return the correct local date regardless of timezone offset.
+function dateLocal(str) {
+  if(!str) return new Date();
+  // Append noon local time — prevents any UTC↔local shift from crossing midnight
+  return new Date(str + 'T12:00:00');
 }
 function tickClock(){
   const n=new Date();
@@ -4999,7 +5016,7 @@ function renderCal(){
       const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       const dt=dayT(ds),dp=dayP(ds);
       const isT=d.toDateString()===today.toDateString();
-      const hasAlert=!!(dayAlerts[ds]&&dayAlerts[ds].length),hasChk=!!calChkSessions[ds];
+      const hasAlert=!!(dayAlerts[ds]&&dayAlerts[ds].length),hasChk=!!(calChkSessions[ds]&&(calChkSessions[ds].session||calChkSessions[ds].trade));
       let cls='day';if(d.getMonth()!==calMon)cls+=' loss'; // dim off-month
       if(dt.length)cls+=Math.abs(dp)>=BIG?(dp>0?' bigp':' bigl'):(dp>0?' profit':' loss');
       if(isT)cls+=' today';if(ds===calSel)cls+=' dsel';if(hasAlert)cls+=' halert';
@@ -5017,7 +5034,7 @@ function renderCal(){
       const ds=`${calYr}-${String(calMon+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const dt=dayT(ds),dp=dayP(ds);
       const isT=today.getDate()===d&&today.getMonth()===calMon&&today.getFullYear()===calYr;
-      const hasAlert=!!(dayAlerts[ds]&&dayAlerts[ds].length),hasChk=!!calChkSessions[ds];
+      const hasAlert=!!(dayAlerts[ds]&&dayAlerts[ds].length),hasChk=!!(calChkSessions[ds]&&(calChkSessions[ds].session||calChkSessions[ds].trade));
       let cls='day';
       if(dt.length)cls+=Math.abs(dp)>=BIG?(dp>0?' bigp':' bigl'):(dp>0?' profit':' loss');
       if(isT)cls+=' today';if(ds===calSel)cls+=' dsel';if(hasAlert)cls+=' halert';
@@ -5038,23 +5055,29 @@ function calSelDay(ds){calSel=ds;document.querySelectorAll('.day').forEach(el=>e
 function renderCalSide(ds){
   const dt=dayT(ds),dp=dayP(ds),parts=ds.split('-');
   const dObj=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
-  const lbl=`${DAYS_F[dObj.getDay()]}, ${MONTHS[parseInt(parts[1])-1]} ${parseInt(parts[2])}`;
+  const lbl=`${DAYS_F[dateLocal(ds).getDay()]}, ${MONTHS[parseInt(parts[1])-1]} ${parseInt(parts[2])}`;
   const sess=calChkSessions[ds]||{};
   const hasSession=!!(sess.session&&Object.keys(sess.session).length);
-  const hasPreTrade=!!(sess.trade&&Object.keys(sess.trade).length);
   const als=dayAlerts[ds]||[];
   // Session done count
   const sessDone=hasSession?Object.values(sess.session).filter(Boolean).length:0;
   const sessTotal=hasSession?Object.keys(sess.session).length:0;
-  const tradeDone=hasPreTrade?Object.values(sess.trade).filter(Boolean).length:0;
-  const tradeTotal=hasPreTrade?Object.keys(sess.trade).length:0;
+  // Pre-trade: now a map of tradeId → {0:bool,1:bool,...}
+  // Count how many trade checklists have at least one item done
+  const tradeChkMap = (sess.trade && typeof sess.trade === 'object') ? sess.trade : {};
+  // Detect old format (numeric keys = flat checklist) vs new (tradeId keys)
+  const isOldFormat = Object.keys(tradeChkMap).every(k => !isNaN(parseInt(k)));
+  const tradeChkEntries = isOldFormat ? [] : Object.entries(tradeChkMap);
+  const hasPreTrade = tradeChkEntries.length > 0;
+  const tradeChkTotal = tradeChkEntries.length;
+  const tradeChkDone = tradeChkEntries.filter(([tid, items]) =>
+    Object.values(items).every(Boolean)).length;
 
   let c=`<div style="font-family:var(--head);font-size:13px;font-weight:700;margin-bottom:3px">${lbl}</div>
     <div style="font-size:11px;color:var(--text2);margin-bottom:10px">${dt.length} trade${dt.length!==1?'s':''} · ${dt.length?`<span class="${dp>=0?'pos':'neg'}">${fdSum(dp)} P&L</span>`:'no trades logged'}</div>
     <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
       <button class="btn btn-c btn-sm" onclick="openCalLogModal('${ds}')">+ Log Trade</button>
       <button class="btn btn-sm btn-g" onclick="openChkModal('${ds}','session')" style="${hasSession?'color:var(--green);border-color:rgba(0,230,118,.4)':''}">${hasSession?'🌅 '+sessDone+'/'+sessTotal+' done':'🌅 Pre-Session'}</button>
-      <button class="btn btn-sm btn-g" onclick="openChkModal('${ds}','trade')" style="${hasPreTrade?'color:var(--cyan);border-color:rgba(0,212,255,.4)':''}">${hasPreTrade?'📋 '+tradeDone+'/'+tradeTotal+' done':'📋 Pre-Trade'}</button>
     </div>`;
 
   // Checklist status strip
@@ -5072,13 +5095,13 @@ function renderCalSide(ds){
       </div>`;
     }
     if(hasPreTrade){
-      const pct=tradeTotal?Math.round(tradeDone/tradeTotal*100):0;
+      const pct=tradeChkTotal?Math.round(tradeChkDone/tradeChkTotal*100):0;
       c+=`<div style="flex:1;min-width:120px;background:var(--bg3);border-radius:7px;padding:7px 10px">
-        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Pre-Trade</div>
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Pre-Trade Checklists</div>
         <div style="height:4px;background:var(--bg4);border-radius:2px;overflow:hidden"><div style="height:100%;background:var(--cyan);width:${pct}%;border-radius:2px"></div></div>
         <div style="display:flex;justify-content:space-between;margin-top:3px">
-          <span style="font-size:10px;color:var(--text2)">${tradeDone}/${tradeTotal} done</span>
-          <button class="ic-btn del" style="font-size:10px;height:16px" onclick="calClearChk('${ds}','trade')" title="Clear pre-trade checklist">✕</button>
+          <span style="font-size:10px;color:var(--text2)">${tradeChkDone}/${tradeChkTotal} complete</span>
+          <button class="ic-btn del" style="font-size:10px;height:16px" onclick="calClearChk('${ds}','trade')" title="Clear all pre-trade checklists">✕</button>
         </div>
       </div>`;
     }
@@ -5108,6 +5131,13 @@ function renderCalSide(ds){
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
             <span style="font-family:var(--mono);font-size:12px;font-weight:600;${p>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(p)}</span>
+            ${(()=>{
+              const tc=tradeChkMap[t.id]||tradeChkMap[String(t.id)];
+              const tcDone=tc?Object.values(tc).filter(Boolean).length:0;
+              const tcTotal=tc?Object.keys(tc).length:0;
+              const tcColor=tc&&tcDone===tcTotal&&tcTotal>0?'color:var(--green);border-color:rgba(0,230,118,.4)':'';
+              return `<button class="btn btn-g" style="font-size:10px;padding:3px 7px;border-radius:6px;${tcColor}" onclick="openChkModal('${ds}','trade',${t.id})" title="Pre-Trade Checklist">${tc?'📋 '+tcDone+'/'+tcTotal:'📋'}</button>`;
+            })()}
             <button class="ic-btn" onclick="openCalEditTrade(${t.id})" title="Edit trade">✎</button>
             <button class="ic-btn del" onclick="calDeleteTrade(${t.id},'${ds}')" title="Delete trade">✕</button>
           </div>
@@ -5150,7 +5180,7 @@ function renderCalSpark(){
 }
 function renderCalDow(){
   const mt=monT(),dows={Mon:0,Tue:0,Wed:0,Thu:0,Fri:0},dm={1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri'};
-  mt.forEach(t=>{const d=new Date(t.date).getDay();if(dm[d])dows[dm[d]]+=Pnet(t);});
+  mt.forEach(t=>{const d=dateLocal(t.date).getDay();if(dm[d])dows[dm[d]]+=Pnet(t);});
   const maxA=Math.max(...Object.values(dows).map(v=>Math.abs(v)),1);
   document.getElementById('c-dow').innerHTML=Object.entries(dows).map(([d,v])=>{const vs=Math.round(v*100)/100;return`<div class="hrow"><span class="hrl">${d}</span><div class="hrb"><div class="hrf" style="width:${(Math.abs(vs)/maxA*100).toFixed(0)}%;background:${vs>=0?'rgba(0,230,118,.5)':'rgba(255,71,87,.5)'}"></div></div><span class="hrv ${vs>=0?'pos':'neg'}">${fdSum(vs)}</span></div>`}).join('');
 }
@@ -5220,21 +5250,28 @@ function toggleCmTag(id, el){
   if(calSelTags.has(id)){calSelTags.delete(id);el.style.background='var(--bg3)';el.style.color='var(--text2)';el.style.borderColor='var(--bdr2)';}
   else{calSelTags.add(id);const t=tagLibrary.find(x=>x.id===id);const s=TAG_STYLE[t?.color||'tc-blue']||'';el.style.cssText=s+';padding:3px 10px;border-radius:14px;font-size:11px;cursor:pointer;transition:all .15s';}
 }
-function openChkModal(ds, type){
+function openChkModal(ds, type, tradeId){
   calLogDate = ds;
+  calChkTradeId = tradeId || null; // null = day-level pre-trade checklist
   type = type || 'session';
   const sess = calChkSessions[ds] || {};
-  const ex = sess[type] || {};
 
   if(type === 'session'){
+    const ex = sess.session || {};
     const items = checklists.session.map(x=>x.text);
     document.getElementById('cm-chk-date').textContent = ds;
     document.getElementById('cm-chk-items').innerHTML = items.map((item,i)=>`<div class="chk ${ex[i]?'done':''}" onclick="togCmChkTyped(this,${i},'session')" data-idx="${i}"><div class="chk-box">${ex[i]?'✓':''}</div><div class="chk-txt">${item}</div></div>`).join('');
     updateCmChkProgTyped(ex, items.length, 'session');
     calMTab('chk', document.getElementById('cmt-chk'));
   } else {
+    // Pre-trade: per-trade when tradeId given, day-level otherwise
+    const tradeMap = sess.trade || {};
+    const ex = calChkTradeId ? (tradeMap[calChkTradeId] || {}) : {};
     const items = checklists.trade.map(x=>x.text);
-    document.getElementById('cm-ptrade-date').textContent = ds;
+    // Update the pre-trade date label to show trade context
+    const t = calChkTradeId ? trades.find(x => String(x.id) === String(calChkTradeId)) : null;
+    const dateLbl = t ? ds + ' · ' + t.symbol + ' ' + t.dir : ds;
+    document.getElementById('cm-ptrade-date').textContent = dateLbl;
     document.getElementById('cm-ptrade-items').innerHTML = items.map((item,i)=>`<div class="chk ${ex[i]?'done':''}" onclick="togCmChkTyped(this,${i},'trade')" data-idx="${i}"><div class="chk-box">${ex[i]?'✓':''}</div><div class="chk-txt">${item}</div></div>`).join('');
     updateCmChkProgTyped(ex, items.length, 'trade');
     calMTab('ptrade', document.getElementById('cmt-ptrade'));
@@ -5349,13 +5386,22 @@ function saveCmChk(type){
   const items = {};
   document.querySelectorAll('#'+listId+' .chk').forEach(el=>{items[parseInt(el.dataset.idx)]=el.classList.contains('done');});
   if(!calChkSessions[calLogDate]) calChkSessions[calLogDate] = {};
-  calChkSessions[calLogDate][type] = items;
+  if(type === 'trade' && calChkTradeId) {
+    // Save against the specific trade ID
+    if(!calChkSessions[calLogDate].trade) calChkSessions[calLogDate].trade = {};
+    calChkSessions[calLogDate].trade[calChkTradeId] = items;
+  } else {
+    calChkSessions[calLogDate][type] = items;
+  }
   const done=Object.values(items).filter(Boolean).length;
   const total=Object.keys(items).length;
+  const t = calChkTradeId ? trades.find(x => String(x.id) === String(calChkTradeId)) : null;
+  const ctx = type==='session' ? 'Pre-Session' : t ? 'Pre-Trade · '+t.symbol : 'Pre-Trade';
   closeModal('cal-modal');
   renderCal();
   if(calSel===calLogDate)renderCalSide(calLogDate);
-  showNotif(done===total?'Checklist complete! ✓':'Checklist saved',`${done}/${total} items — ${type==='session'?'Pre-Session':'Pre-Trade'} for ${calLogDate}`,(done===total?'success':'info'));
+  saveCurrentUserData();
+  showNotif(done===total?'Checklist complete! ✓':'Checklist saved',`${done}/${total} items — ${ctx} for ${calLogDate}`,(done===total?'success':'info'));
 }
 
 // ═══════════════════════════════════════
@@ -5456,17 +5502,27 @@ function calDeleteAllTrades(ds){
 }
 
 // ── Clear a checklist (session or trade) for a given day ──
-function calClearChk(ds, type){
-  const label = type === 'session' ? 'Pre-Session' : 'Pre-Trade';
-  if(!confirm('Clear the ' + label + ' checklist for ' + ds + '?')) return;
-  if(calChkSessions[ds]) {
-    delete calChkSessions[ds][type];
+function calClearChk(ds, type, tradeId){
+  const label = type === 'session' ? 'Pre-Session' : tradeId ? 'Pre-Trade (this trade)' : 'All Pre-Trade';
+  showConfirm('↺ Clear Checklist?', 'Remove the ' + label + ' checklist for ' + ds + '?', 'var(--red)', function() {
+    if(!calChkSessions[ds]) return;
+    if(type === 'trade' && tradeId) {
+      // Clear one trade's checklist only
+      if(calChkSessions[ds].trade) {
+        delete calChkSessions[ds].trade[String(tradeId)];
+        delete calChkSessions[ds].trade[Number(tradeId)];
+        if(!Object.keys(calChkSessions[ds].trade).length) delete calChkSessions[ds].trade;
+      }
+    } else {
+      delete calChkSessions[ds][type];
+    }
     if(!Object.keys(calChkSessions[ds]).length) delete calChkSessions[ds];
-  }
-  renderCal();
-  calSel = ds;
-  renderCalSide(ds);
-  showNotif('Checklist cleared', label + ' checklist removed for ' + ds, 'info');
+    saveCurrentUserData();
+    renderCal();
+    calSel = ds;
+    renderCalSide(ds);
+    showNotif('Checklist cleared', label + ' removed for ' + ds, 'info');
+  });
 }
 
 // ── Open edit-trade modal from calendar side panel (delegates to the main openEditTrade) ──
@@ -5582,7 +5638,7 @@ function renderACharts(){
   charts_.tod=new Chart(document.getElementById('c-tod').getContext('2d'),{type:'bar',data:{labels:Object.keys(tBuk),datasets:[{data:tv,backgroundColor:tv.map(v=>v>=0?'rgba(0,212,255,.65)':'rgba(255,107,53,.65)'),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#3d5068',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#3d5068',font:{size:9},callback:v=>'$'+v},grid:{color:'rgba(255,255,255,.04)'}}}}});
   const dBuk={Mon:{pnl:0,count:0},Tue:{pnl:0,count:0},Wed:{pnl:0,count:0},Thu:{pnl:0,count:0},Fri:{pnl:0,count:0}};
   const dMap={1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri'};
-  getAccountTrades().forEach(t=>{const d=new Date(t.date).getDay();if(dMap[d]){dBuk[dMap[d]].pnl+=Pnet(t);dBuk[dMap[d]].count++;}});
+  getAccountTrades().forEach(t=>{const d=dateLocal(t.date).getDay();if(dMap[d]){dBuk[dMap[d]].pnl+=Pnet(t);dBuk[dMap[d]].count++;}});
   const dDays=Object.keys(dBuk);
   const dv=dDays.map(d=>Math.round(dBuk[d].pnl*100)/100);
   const dCounts=dDays.map(d=>dBuk[d].count);
@@ -5803,7 +5859,7 @@ function renderTrades(){
           onclick="event.stopPropagation();bulkToggle(${t.id},this.checked)"
           style="width:15px;height:15px;cursor:pointer;accent-color:var(--cyan)" />
       </td>
-      <td onclick="toggleTradeDetail(${t.id})" style="font-size:11px;color:var(--text3);white-space:nowrap">${fmtDate(new Date(t.date))}</td>
+      <td onclick="toggleTradeDetail(${t.id})" style="font-size:11px;color:var(--text3);white-space:nowrap">${fmtDate(dateLocal(t.date))}</td>
       <td onclick="toggleTradeDetail(${t.id})" style="font-family:var(--mono);font-weight:700;font-size:13px">${t.symbol}</td>
       <td onclick="toggleTradeDetail(${t.id})"><span class="tag tgr">${t.asset}</span></td>
       <td onclick="toggleTradeDetail(${t.id})">${t.dir==='Long'?'<span class="tag tg">Long</span>':'<span class="tag tr">Short</span>'}</td>
@@ -5883,7 +5939,7 @@ function renderTradeDetailPanel(t){
             <span class="tag ${t.dir==='Long'?'tg':'tr'}">${t.dir}</span>
             <span class="tag tgr">${t.asset}</span>
             ${acct?`<span class="tag tp">${acct.name}</span>`:''}
-            <span style="font-size:11px;color:var(--text2)">${fmtDate(new Date(t.date))} · ${t.time||''}</span>
+            <span style="font-size:11px;color:var(--text2)">${fmtDate(dateLocal(t.date))} · ${t.time||''}</span>
             ${t.session?`<span style="font-size:11px;color:var(--text3)">· ${t.session}</span>`:''}
           </div>
         </div>
@@ -6030,7 +6086,13 @@ function initLog(){
   document.getElementById('lf-date').value=new Date().toISOString().slice(0,10);
   document.getElementById('lf-time').value=new Date().toTimeString().slice(0,5);
   ['lf-sym','lf-entry','lf-exit'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  document.getElementById('lf-qty').value=1;document.getElementById('lf-mult').value=1;
+  document.getElementById('lf-qty').value = appSettings.defaultQty || 1;
+  document.getElementById('lf-mult').value = appSettings.defaultMult || 1;
+  const feeEl = document.getElementById('lf-fee');
+  const commission = appSettings.commission || 0;
+  const defaultQty = appSettings.defaultQty || 1;
+  if(feeEl) feeEl.value = commission ? parseFloat((commission * defaultQty).toFixed(4)) : 0;
+  updateLogFeeHint();
   document.getElementById('lf-prev').classList.remove('show');
   logStep('details');
 }
@@ -6057,9 +6119,16 @@ function calcLfPrev(){
   const diff=dir==='Long'?priceDiff(ex,en):priceDiff(en,ex);
   const p=parseFloat((diff*qty*mult).toFixed(6));
   const pDisplay=Math.round(p*100)/100;
-  document.getElementById('lf-pv').textContent=fdSum(pDisplay);
-  document.getElementById('lf-pv').style.color=p>=0?'var(--green)':'var(--red)';
-  document.getElementById('lf-pf').textContent=`(${dir}) × ${qty} × ${mult}`;
+  const feeVal = parseFloat(document.getElementById('lf-fee')?.value) || 0;
+  const netDisplay = Math.round((pDisplay - feeVal) * 100) / 100;
+  const showNet = appSettings.includeFees !== false && feeVal > 0;
+  document.getElementById('lf-pv').textContent = showNet ? fdSum(netDisplay) : fdSum(pDisplay);
+  document.getElementById('lf-pv').style.color = (showNet ? netDisplay : pDisplay) >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('lf-pf').textContent = showNet
+    ? `(${dir}) × ${qty} × ${mult} − $${feeVal} fee`
+    : `(${dir}) × ${qty} × ${mult}`;
+  // Auto-recalc fee when qty changes if commission is set
+  updateLogFeeHint();
   const rrEl=document.getElementById('lf-rr');
   if(sl&&tp&&en){
     const risk=Math.abs(priceDiff(en,sl));
@@ -7087,10 +7156,12 @@ function initTrading() {
   const dd = document.getElementById('s-default-dir');
   const dq = document.getElementById('s-default-qty');
   const dm = document.getElementById('s-default-mult');
+  const dc = document.getElementById('s-default-commission');
   if(da) da.value = appSettings.defaultAsset;
   if(dd) dd.value = appSettings.defaultDir;
   if(dq) dq.value = appSettings.defaultQty;
   if(dm) dm.value = appSettings.defaultMult;
+  if(dc) dc.value = appSettings.commission || 0;
 }
 
 function renderFuturesMults() {
@@ -8370,7 +8441,7 @@ function openTradeReview(id) {
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div>
           <div style="font-family:var(--head);font-size:15px;font-weight:700">Trade Review — ${t.symbol}</div>
-          <div style="font-size:11px;color:var(--text2);margin-top:2px">${fmtDate(new Date(t.date))} · ${t.dir} · Qty ${t.qty} · <span style="${p>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(p)}</span></div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">${fmtDate(dateLocal(t.date))} · ${t.dir} · Qty ${t.qty} · <span style="${p>=0?'color:var(--green)':'color:var(--red)'}">${fdSum(p)}</span></div>
         </div>
         <button style="background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;line-height:1" onclick="document.getElementById('review-overlay').remove()">×</button>
       </div>
@@ -8868,7 +8939,7 @@ function renderMissedJournal() {
             ${m.setup?`<span class="tag tb" style="font-size:10px">${setupIcon} ${m.setup}</span>`:''}
             ${emo}
           </div>
-          <div style="font-size:11px;color:var(--text3)">${fmtDate(new Date(m.date))}${m.time?' · '+m.time:''} · Confidence: ${confStars}</div>
+          <div style="font-size:11px;color:var(--text3)">${fmtDate(dateLocal(m.date))}${m.time?' · '+m.time:''} · Confidence: ${confStars}</div>
         </div>
 
         <!-- Right: est P&L -->
@@ -9254,7 +9325,7 @@ function renderMissedAnalytics() {
   const dowMap={Mon:0,Tue:0,Wed:0,Thu:0,Fri:0};
   const dowCnt={Mon:0,Tue:0,Wed:0,Thu:0,Fri:0};
   const dayAbbr={1:'Mon',2:'Tue',3:'Wed',4:'Thu',5:'Fri'};
-  mt.forEach(m=>{const d=new Date(m.date).getDay();if(dayAbbr[d]){dowMap[dayAbbr[d]]+=(m.estPnl||0);dowCnt[dayAbbr[d]]++;}});
+  mt.forEach(m=>{const d=dateLocal(m.date).getDay();if(dayAbbr[d]){dowMap[dayAbbr[d]]+=(m.estPnl||0);dowCnt[dayAbbr[d]]++;}});
   const maxDow=Math.max(...Object.values(dowMap).map(v=>Math.abs(v)),1);
   const dowd = document.getElementById('missed-dow-breakdown');
   if(dowd) dowd.innerHTML = Object.entries(dowMap).map(([d,v])=>`
@@ -13029,7 +13100,7 @@ function renderMissedMonthly() {
     const withPrice = trades.filter(m => m.entry && m.exit);
     const mWins     = trades.filter(m => (m.estPnl||0) > 0).length;
     const mLosses   = trades.filter(m => (m.estPnl||0) < 0).length;
-    const dateObj   = new Date(ym + '-15');
+    const dateObj   = new Date(ym + '-15T12:00:00');
     const monthLabel = dateObj.toLocaleDateString('en-US', {month:'long', year:'numeric'});
     const isPos = monthPnl >= 0;
 
@@ -13087,6 +13158,48 @@ function renderMissedMonthly() {
 
   el.innerHTML = html;
 }
+
+
+// ── Commission auto-fill helpers ─────────────────────────────────────────
+function applyDefaultCommission() {
+  const commission = appSettings.commission || 0;
+  if(!commission) {
+    showNotif('No default commission set', 'Go to Settings → Trading to set a default commission', 'info');
+    return;
+  }
+  const qty = parseFloat(document.getElementById('lf-qty')?.value) || 1;
+  const fee = Math.round(commission * qty * 100) / 100;
+  const feeEl = document.getElementById('lf-fee');
+  if(feeEl) { feeEl.value = fee; calcLfPrev(); }
+  showNotif('Fee auto-filled', '$' + fee + ' (' + commission + '/contract × ' + qty + ' contracts)', 'info');
+}
+
+function updateLogFeeHint() {
+  const hintEl = document.getElementById('lf-fee-hint');
+  if(!hintEl) return;
+  const commission = appSettings.commission || 0;
+  if(commission) {
+    const qty = parseFloat(document.getElementById('lf-qty')?.value) || 1;
+    hintEl.textContent = 'Default: $' + commission + '/contract × ' + qty + ' = $' + Math.round(commission * qty * 100) / 100;
+  } else {
+    hintEl.textContent = '(Set default in Settings → Trading)';
+  }
+}
+
+function updateLogFeeFromCommission() {
+  // Called when default commission changes in Settings
+  // Only updates the log form if it's currently open/visible
+  const feeEl = document.getElementById('lf-fee');
+  if(!feeEl) return;
+  const commission = appSettings.commission || 0;
+  if(commission) {
+    const qty = parseFloat(document.getElementById('lf-qty')?.value) || 1;
+    feeEl.value = Math.round(commission * qty * 100) / 100;
+    calcLfPrev();
+  }
+  updateLogFeeHint();
+}
+
 
 function showNotif(title,msg,type='info'){const stack=document.getElementById('notif-stack');if(!stack)return;const id='n'+nid++;const tc={info:'',danger:'nd',success:'ns',warn:'nw'};const div=document.createElement('div');div.className=`notif ${tc[type]||''}`;div.id=id;div.innerHTML=`<div style="flex:1"><div style="font-size:12px;font-weight:600;margin-bottom:2px">${title}</div>${msg?`<div style="font-size:11px;color:var(--text2);line-height:1.4">${msg}</div>`:''}</div><div style="color:var(--text3);font-size:14px;cursor:pointer;flex-shrink:0" onclick="document.getElementById('${id}').remove()">×</div>`;stack.appendChild(div);setTimeout(()=>{const e=document.getElementById(id);if(e){e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(()=>{const x=document.getElementById(id);if(x)x.remove();},300);}},6000);}
 
