@@ -2750,7 +2750,10 @@ tr:hover td{background:rgba(255,255,255,.015)}
         <div id="st-trading" style="display:none">
           <div class="g2" style="max-width:800px">
             <div class="card">
-              <div class="sec">Default Trade Settings</div>
+              <div class="sec" style="display:flex;align-items:center;justify-content:space-between">
+                <span>Default Trade Settings</span>
+                <span style="font-size:11px;font-weight:400;color:var(--cyan);background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.2);border-radius:6px;padding:2px 8px" id="trading-settings-acct-label"></span>
+              </div>
               <div class="fg"><label>Default Asset Class</label>
                 <select id="s-default-asset">
                   <option>Futures</option><option>Forex</option><option>Stocks</option><option>Crypto</option>
@@ -2780,7 +2783,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
               <div class="pref-row"><div><div style="font-size:13px;font-weight:500">Include Commission in P&L</div><div style="font-size:11px;color:var(--text2)">Subtract fees from reported P&L</div></div><label class="tgl-wrap"><input type="checkbox" id="s-include-fees" checked onchange="appSettings.includeFees=this.checked;saveCurrentUserData()"><span class="tgl-track"></span></label></div>
               <div class="pref-row"><div><div style="font-size:13px;font-weight:500">Show Gross & Net P&L</div><div style="font-size:11px;color:var(--text2)">Display both before and after fees</div></div><label class="tgl-wrap"><input type="checkbox" id="s-show-gross-net"><span class="tgl-track"></span></label></div>
               <div class="fg" style="margin-top:12px"><label>Default Commission ($ per contract/share) <span style="font-size:10px;color:var(--text3);font-weight:400">— auto-fills fee = qty × this amount when logging trades</span></label>
-                <input type="number" id="s-default-commission" value="0" step="0.01" min="0" oninput="appSettings.commission=parseFloat(this.value)||0;saveCurrentUserData();updateLogFeeFromCommission()">
+                <input type="number" id="s-default-commission" value="0" step="0.01" min="0" oninput="setAccTrading('commission',parseFloat(this.value)||0);appSettings.commission=parseFloat(this.value)||0;updateLogFeeFromCommission()">
               </div>
             </div>
             <div class="card">
@@ -4597,7 +4600,8 @@ function P(t){
 // Net P&L: subtracts commission/fees when the setting is enabled
 function Pnet(t){
   const gross=P(t);
-  if(appSettings.includeFees===false) return gross;
+  const _incFees = getAccTrading ? getAccTrading().includeFees : appSettings.includeFees;
+  if(_incFees===false) return gross;
   const fee=parseFloat(t.fee||0);
   return parseFloat((gross-fee).toFixed(6));
 }
@@ -6092,11 +6096,12 @@ function initLog(){
   document.getElementById('lf-date').value=new Date().toISOString().slice(0,10);
   document.getElementById('lf-time').value=new Date().toTimeString().slice(0,5);
   ['lf-sym','lf-entry','lf-exit'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  document.getElementById('lf-qty').value = appSettings.defaultQty || 1;
-  document.getElementById('lf-mult').value = appSettings.defaultMult || 1;
+  const _accTs = getAccTrading();
+  document.getElementById('lf-qty').value = _accTs.defaultQty || 1;
+  document.getElementById('lf-mult').value = _accTs.defaultMult || 1;
   const feeEl = document.getElementById('lf-fee');
-  const commission = appSettings.commission || 0;
-  const defaultQty = appSettings.defaultQty || 1;
+  const commission = _accTs.commission || 0;
+  const defaultQty = _accTs.defaultQty || 1;
   if(feeEl) feeEl.value = commission ? parseFloat((commission * defaultQty).toFixed(4)) : 0;
   updateLogFeeHint();
   document.getElementById('lf-prev').classList.remove('show');
@@ -6817,7 +6822,7 @@ function handleCSV(inp){
             // Use CSV fee column if present; otherwise apply default commission × qty
             const csvFee = parseFloat(row.fee || row.commission || row.fees || 0);
             if(csvFee) return csvFee;
-            const defComm = appSettings.commission || 0;
+            const defComm = getAccTrading().commission || 0;
             return defComm ? Math.round(defComm * qty * 100) / 100 : 0;
           })(),
           optionType: _csvIsOpt ? (row.option_type||row.optiontype||row.type||'Call') : undefined,
@@ -7164,16 +7169,25 @@ function setDensity(d, el) {
 // ── Trading ──
 function initTrading() {
   renderFuturesMults();
+  const ts = getAccTrading(); // per-account trading settings
+  const acct = getActiveAccount();
+  // Show which account's settings are being edited
+  const hdrEl = document.getElementById('trading-settings-acct-label');
+  if(hdrEl) hdrEl.textContent = acct ? acct.name : '';
   const da = document.getElementById('s-default-asset');
   const dd = document.getElementById('s-default-dir');
   const dq = document.getElementById('s-default-qty');
   const dm = document.getElementById('s-default-mult');
   const dc = document.getElementById('s-default-commission');
-  if(da) da.value = appSettings.defaultAsset;
-  if(dd) dd.value = appSettings.defaultDir;
-  if(dq) dq.value = appSettings.defaultQty;
-  if(dm) dm.value = appSettings.defaultMult;
-  if(dc) dc.value = appSettings.commission || 0;
+  const di = document.getElementById('s-include-fees');
+  const ds = document.getElementById('s-default-session');
+  if(da) da.value = ts.defaultAsset;
+  if(dd) dd.value = ts.defaultDir;
+  if(dq) dq.value = ts.defaultQty;
+  if(dm) dm.value = ts.defaultMult;
+  if(dc) dc.value = ts.commission;
+  if(di) di.checked = ts.includeFees !== false;
+  if(ds) ds.value = ts.defaultSession;
 }
 
 function renderFuturesMults() {
@@ -7245,8 +7259,23 @@ function saveSection(section) {
     // emoji + skin tone are saved directly in appSettings by their click handlers
   }
   if(section === 'trading') {
-    const incFees = document.getElementById('s-include-fees');
-    if(incFees) appSettings.includeFees = incFees.checked;
+    const acct = getActiveAccount();
+    if(!acct) return;
+    if(!acct.tradingSettings) acct.tradingSettings = {};
+    const ts = acct.tradingSettings;
+    const g = id => document.getElementById(id);
+    if(g('s-default-asset'))    ts.defaultAsset   = g('s-default-asset').value;
+    if(g('s-default-dir'))      ts.defaultDir     = g('s-default-dir').value;
+    if(g('s-default-qty'))      ts.defaultQty     = parseFloat(g('s-default-qty').value) || 1;
+    if(g('s-default-mult'))     ts.defaultMult    = parseFloat(g('s-default-mult').value) || 1;
+    if(g('s-default-session'))  ts.defaultSession = g('s-default-session').value;
+    if(g('s-default-commission')) ts.commission   = parseFloat(g('s-default-commission').value) || 0;
+    if(g('s-include-fees'))     ts.includeFees    = g('s-include-fees').checked;
+    // Also update appSettings for backward compat (Pnet uses appSettings.includeFees)
+    appSettings.includeFees = ts.includeFees;
+    appSettings.commission  = ts.commission;
+    appSettings.defaultQty  = ts.defaultQty;
+    appSettings.defaultMult = ts.defaultMult;
   }
   showNotif('Settings saved', section.charAt(0).toUpperCase()+section.slice(1)+' settings updated', 'success');
 }
@@ -7335,14 +7364,22 @@ function switchAccount(id){
   if(typeof _bulkSelected !== 'undefined') { _bulkSelected.clear(); }
   closeAccDropdown();
   updateAccSelector();
+  // Sync global appSettings convenience copies from new account's trading settings
+  const _ts = getAccTrading();
+  appSettings.commission  = _ts.commission;
+  appSettings.includeFees = _ts.includeFees;
+  appSettings.defaultQty  = _ts.defaultQty;
+  appSettings.defaultMult = _ts.defaultMult;
   // Re-render all active data views
   const page=document.querySelector('.page.active')?.id?.replace('pg-','');
   if(page){
-    const initMap={home:initHome,dashboard:initDashboard,calendar:renderCal,analytics:initAnalytics,trades:renderTrades};
+    const initMap={home:initHome,dashboard:initDashboard,calendar:renderCal,analytics:initAnalytics,trades:renderTrades,settings:initSettings};
     if(initMap[page])initMap[page]();
   }
+  // Reload trading settings panel if it's visible
+  if(document.getElementById('st-trading')?.style.display === 'block') initTrading();
   const acct=getActiveAccount();
-  showNotif('Account switched',acct.name+' is now active','success');
+  showNotif('Account switched', acct.name + ' — trading settings loaded', 'success');
 }
 
 function updateAccSelector(){
@@ -13189,7 +13226,7 @@ function applyDefaultCommission() {
 function updateLogFeeHint() {
   const hintEl = document.getElementById('lf-fee-hint');
   if(!hintEl) return;
-  const commission = appSettings.commission || 0;
+  const commission = getAccTrading().commission || 0;
   if(commission) {
     const qty = parseFloat(document.getElementById('lf-qty')?.value) || 1;
     hintEl.textContent = 'Default: $' + commission + '/contract × ' + qty + ' = $' + Math.round(commission * qty * 100) / 100;
@@ -13203,13 +13240,40 @@ function updateLogFeeFromCommission() {
   // Only updates the log form if it's currently open/visible
   const feeEl = document.getElementById('lf-fee');
   if(!feeEl) return;
-  const commission = appSettings.commission || 0;
+  const commission = getAccTrading().commission || 0;
   if(commission) {
     const qty = parseFloat(document.getElementById('lf-qty')?.value) || 1;
     feeEl.value = Math.round(commission * qty * 100) / 100;
     calcLfPrev();
   }
   updateLogFeeHint();
+}
+
+
+
+// ── Per-account trading settings helper ──────────────────────────────────
+// Returns the trading settings for the active account,
+// falling back to global appSettings for any missing field.
+function getAccTrading() {
+  const acct = getActiveAccount();
+  const ts   = (acct && acct.tradingSettings) ? acct.tradingSettings : {};
+  return {
+    defaultAsset:   ts.defaultAsset   ?? appSettings.defaultAsset   ?? 'Futures',
+    defaultDir:     ts.defaultDir     ?? appSettings.defaultDir      ?? 'Long',
+    defaultQty:     ts.defaultQty     ?? appSettings.defaultQty      ?? 1,
+    defaultMult:    ts.defaultMult    ?? appSettings.defaultMult     ?? 1,
+    defaultSession: ts.defaultSession ?? appSettings.defaultSession  ?? 'Regular Hours',
+    commission:     ts.commission     !== undefined ? ts.commission   : (appSettings.commission ?? 0),
+    includeFees:    ts.includeFees    !== undefined ? ts.includeFees  : (appSettings.includeFees !== false),
+  };
+}
+
+function setAccTrading(key, value) {
+  const acct = getActiveAccount();
+  if(!acct) return;
+  if(!acct.tradingSettings) acct.tradingSettings = {};
+  acct.tradingSettings[key] = value;
+  saveCurrentUserData();
 }
 
 
