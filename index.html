@@ -4063,6 +4063,44 @@ tr:hover td{background:rgba(255,255,255,.015)}
   </div>
 </div>
 
+  <!-- No-Trade Day Modal -->
+<div class="modal-bg" id="no-trade-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <span>📵 No-Trade Day Journal</span>
+      <button class="modal-close" onclick="closeModal('no-trade-modal')">×</button>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px" id="ntd-date-lbl"></div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Reason for not trading</label>
+      <select id="ntd-reason">
+        <option value="market-conditions">📊 Poor market conditions</option>
+        <option value="news-event">📰 High-impact news event</option>
+        <option value="personal">🙋 Personal / health day</option>
+        <option value="overtrading-risk">🛑 Avoiding overtrading</option>
+        <option value="daily-loss-limit">🚫 Hit daily loss limit</option>
+        <option value="no-setup">🔍 No valid setup found</option>
+        <option value="travel">✈️ Travel / away from desk</option>
+        <option value="review-day">📋 Review & study day</option>
+        <option value="other">✏️ Other</option>
+      </select>
+    </div>
+    <div class="fg" style="margin-bottom:14px">
+      <label>Journal Notes</label>
+      <textarea id="ntd-notes" rows="5" placeholder="What did you observe today? What would have been the ideal trade? What are you studying or reviewing?"></textarea>
+    </div>
+    <div class="fg" style="margin-bottom:14px">
+      <label>Market Observation <span style="font-size:10px;color:var(--text3);font-weight:400">(optional — what did price do?)</span></label>
+      <input id="ntd-observation" type="text" placeholder="e.g. Choppy open, news spike at 10 AM, rangebound afternoon">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-c" style="flex:1;justify-content:center" onclick="saveNoTradeDay()">Save Journal Entry</button>
+      <button class="btn btn-g" onclick="closeModal('no-trade-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
   <!-- Greeting Edit Modal -->
 <div class="modal-bg" id="greeting-edit-modal">
   <div class="modal" style="max-width:440px">
@@ -4537,6 +4575,9 @@ let tagLibrary=[
 const dayAlerts={};
 
 // ─── Market Outlook ───────────────────────────────────────────
+// No-trade day journal: { "YYYY-MM-DD": { reason:"", notes:"", savedAt:"" } }
+let noTradeDays = {};
+
 let marketOutlook = {
   daily: {
     bias:'', conviction:0,
@@ -5028,7 +5069,7 @@ function renderCal(){
       html+=`<div class="${cls}" onclick="calSelDay('${ds}')" data-d="${ds}" style="min-height:110px">
         <div class="dn"><span>${d.getDate()} <span style="color:var(--text3);font-weight:400;font-size:9px">${DAYS_S[d.getDay()]}</span></span>${isT?'<span style="width:5px;height:5px;border-radius:50%;background:var(--cyan);display:inline-block"></span>':''}</div>
         ${dt.length?`<div class="dp ${dp>=0?'pos':'neg'}">${fdSum(dp)}</div><div class="dm">${dt.length} trade${dt.length!==1?'s':''}</div>`:''}
-        ${(hasChk||hasAlert||(Math.abs(dp)>=BIG&&dt.length))?`<div class="dbdg">${hasChk?'<span class="dbb dbc">✓ chk</span>':''}${hasAlert?'<span class="dbb dba">⚠ alert</span>':''}${(Math.abs(dp)>=BIG&&dt.length)?`<span class="dbb dbb-big">${dp>=0?'★ big win':'★ big loss'}</span>`:''}</div>`:''}
+        ${(hasChk||hasAlert||noTradeDays[ds]||(Math.abs(dp)>=BIG&&dt.length))?`<div class="dbdg">${hasChk?'<span class="dbb dbc">✓ chk</span>':''}${hasAlert?'<span class="dbb dba">⚠ alert</span>':''}${noTradeDays[ds]?'<span class="dbb" style="background:rgba(255,193,7,.2);color:var(--gold);border-color:rgba(255,193,7,.35)">📵 no trade</span>':''}${(Math.abs(dp)>=BIG&&dt.length)?`<span class="dbb dbb-big">${dp>=0?'★ big win':'★ big loss'}</span>`:''}</div>`:''}
         ${dt.length?`<div class="dbar" style="background:${dp>=0?'rgba(0,230,118,.55)':'rgba(255,71,87,.55)'};width:${pct}%"></div>`:''}
       </div>`;
     }
@@ -5046,7 +5087,7 @@ function renderCal(){
       html+=`<div class="${cls}" onclick="calSelDay('${ds}')" data-d="${ds}">
         <div class="dn"><span>${d}</span>${isT?'<span style="width:5px;height:5px;border-radius:50%;background:var(--cyan);display:inline-block"></span>':''}</div>
         ${dt.length?`<div class="dp ${dp>=0?'pos':'neg'}">${fdSum(dp)}</div><div class="dm">${dt.length} trade${dt.length!==1?'s':''}</div>`:''}
-        ${(hasChk||hasAlert||(Math.abs(dp)>=BIG&&dt.length))?`<div class="dbdg">${hasChk?'<span class="dbb dbc">✓ chk</span>':''}${hasAlert?'<span class="dbb dba">⚠ alert</span>':''}${(Math.abs(dp)>=BIG&&dt.length)?`<span class="dbb dbb-big">${dp>=0?'★ big win':'★ big loss'}</span>`:''}</div>`:''}
+        ${(hasChk||hasAlert||noTradeDays[ds]||(Math.abs(dp)>=BIG&&dt.length))?`<div class="dbdg">${hasChk?'<span class="dbb dbc">✓ chk</span>':''}${hasAlert?'<span class="dbb dba">⚠ alert</span>':''}${noTradeDays[ds]?'<span class="dbb" style="background:rgba(255,193,7,.2);color:var(--gold);border-color:rgba(255,193,7,.35)">📵 no trade</span>':''}${(Math.abs(dp)>=BIG&&dt.length)?`<span class="dbb dbb-big">${dp>=0?'★ big win':'★ big loss'}</span>`:''}</div>`:''}
         ${dt.length?`<div class="dbar" style="background:${dp>=0?'rgba(0,230,118,.55)':'rgba(255,71,87,.55)'};width:${pct}%"></div>`:''}
       </div>`;
     }
@@ -5082,6 +5123,9 @@ function renderCalSide(ds){
     <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
       <button class="btn btn-c btn-sm" onclick="openCalLogModal('${ds}')">+ Log Trade</button>
       <button class="btn btn-sm btn-g" onclick="openChkModal('${ds}','session')" style="${hasSession?'color:var(--green);border-color:rgba(0,230,118,.4)':''}">${hasSession?'🌅 '+sessDone+'/'+sessTotal+' done':'🌅 Pre-Session'}</button>
+      ${noTradeDays[ds]
+        ? `<button class="btn btn-sm btn-g" onclick="openNoTradeDay('${ds}')" style="color:var(--gold);border-color:rgba(255,193,7,.4)">📵 No-Trade Entry</button>`
+        : `<button class="btn btn-sm btn-g" onclick="openNoTradeDay('${ds}')">📵 No-Trade Day</button>`}
     </div>`;
 
   // Checklist status strip
@@ -5115,6 +5159,26 @@ function renderCalSide(ds){
   if(als.length){
     c+='<div class="divider" style="margin:8px 0"></div>';
     als.forEach(a=>{c+=`<div style="background:var(--bg3);border-left:3px solid ${a.type==='profit'?'var(--green)':a.type==='loss'?'var(--red)':'var(--gold)'};border-radius:0 6px 6px 0;padding:6px 10px;margin-bottom:5px"><div style="font-size:11px;font-weight:500">${a.txt}</div></div>`;});
+  }
+
+  // No-trade day entry
+  if(noTradeDays[ds]) {
+    c += '<div class="divider" style="margin:8px 0"></div>';
+    const ntd = noTradeDays[ds];
+    c += `<div style="background:rgba(255,193,7,.07);border:1px solid rgba(255,193,7,.25);border-radius:10px;padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:4px">📵 No-Trade Day</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:${ntd.notes?'5px':'0'}">${NTD_REASON_LABELS[ntd.reason]||ntd.reason||''}</div>
+          ${ntd.notes?`<div style="font-size:11px;color:var(--text2);line-height:1.5;font-style:italic">"${ntd.notes.replace(/</g,'&lt;').slice(0,140)}${ntd.notes.length>140?'…':''}"</div>`:''}
+          ${ntd.observation?`<div style="font-size:10px;color:var(--text3);margin-top:4px">📈 ${ntd.observation.slice(0,80)}</div>`:''}
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0">
+          <button class="ic-btn" onclick="openNoTradeDay('${ds}')" title="Edit">✎</button>
+          <button class="ic-btn del" onclick="deleteNoTradeDay('${ds}')" title="Delete">✕</button>
+        </div>
+      </div>
+    </div>`;
   }
 
   if(dt.length){
@@ -6715,9 +6779,66 @@ function handleCSV(inp){
         const isTradovate = row.buyprice   !== undefined || row.buytimestamp !== undefined ||
                             row.boughttimestamp !== undefined || row.buyfillid !== undefined;
 
+        // New generated format: position(L/S), entryDate(ISO), exitDate(ISO),
+        //   entryPrice, exitPrice, maxQuantity, pnlDollars, commission, broker
+        const isGenFormat = (row.position !== undefined && (row.entrydate !== undefined || row.entryprice !== undefined))
+                         || (row.broker !== undefined && row.entrydatetime !== undefined)
+                         || (row.pnldollars !== undefined && row.maxquantity !== undefined);
+
         let en, ex, normDir, parsedDate, parsedTime;
 
-        if(isTradovate) {
+        if(isGenFormat) {
+          // ── Generated / new broker format ─────────────────────────────
+          en = parseFloat(row.entryprice || row.entry_price || 0);
+          ex = parseFloat(row.exitprice  || row.exit_price  || 0);
+
+          // Direction: L=Long, S=Short (also accept Buy/Sell, Long/Short)
+          const posRaw = (row.position || row.direction || row.side || '').trim();
+          normDir = (posRaw === 'L' || posRaw.toLowerCase() === 'long'  || posRaw.toLowerCase() === 'buy')
+                    ? 'Long' : 'Short';
+
+          // ISO timestamp: "2026-03-12T15:50:19.272Z" → date + time in local tz
+          const rawDt = row.entrydate || row.entry_date || row.entrydatetime || row.opentime || '';
+          if(rawDt) {
+            // Parse via Date so UTC is converted to local
+            const dtObj = new Date(rawDt);
+            if(!isNaN(dtObj)) {
+              parsedDate = dtObj.getFullYear() + '-' +
+                           String(dtObj.getMonth()+1).padStart(2,'0') + '-' +
+                           String(dtObj.getDate()).padStart(2,'0');
+              parsedTime = String(dtObj.getHours()).padStart(2,'0') + ':' +
+                           String(dtObj.getMinutes()).padStart(2,'0');
+            } else {
+              // Fallback: treat as already-local date string
+              const dtSplit = splitDateTime(rawDt, '');
+              parsedDate = dtSplit.date;
+              parsedTime = dtSplit.time;
+            }
+          }
+
+          // Qty: maxQuantity or quantity or qty
+          const genQty = parseFloat(row.maxquantity || row.quantity || row.qty || 1) || 1;
+          row._genQty = genQty;
+
+          // Fee: commission column
+          const genFee = parseFloat(row.commission || row.fees || row.fee || 0);
+          row._genFee = genFee;
+
+          // Multiplier: guess from symbol first, then back-calc from pnlDollars
+          const guessedMult2 = guessMultiplier(sym);
+          if(guessedMult2) {
+            row._resolvedMult = guessedMult2;
+          } else {
+            const genPnl  = parseFloat(row.pnldollars || row.pnl || row.profit || 0);
+            const pDiff   = normDir === 'Long' ? (ex - en) : (en - ex);
+            if(Math.abs(pDiff) > 0 && Math.abs(genPnl) > 0) {
+              const gross = genPnl + genFee; // pnlDollars is net of commission
+              const calcM = Math.abs(gross) / (Math.abs(pDiff) * genQty);
+              if(calcM > 0 && calcM < 100000) row._resolvedMult = Math.round(calcM * 100) / 100;
+            }
+          }
+
+        } else if(isTradovate) {
           const buyPrice  = parseFloat(row.buyprice  || row.buyfillprice  || 0);
           const sellPrice = parseFloat(row.sellprice || row.sellfillprice || 0);
 
@@ -6798,7 +6919,7 @@ function handleCSV(inp){
 
         if(!en || !ex) { errs++; errDetails.push('Row '+i+': could not determine entry/exit'); continue; }
 
-        const qty  = parseFloat(row.quantity||row.qty||1) || 1;
+        const qty  = row._genQty || parseFloat(row.quantity||row.qty||1) || 1;
 
         // Multiplier: pre-resolved (Tradovate back-calc) → column value → symbol → 1
         let mult = row._resolvedMult ||
@@ -6819,7 +6940,8 @@ function handleCSV(inp){
           entry: en, exit: ex, qty,
           mult: _csvIsOpt ? (parseFloat(row.contract_multiplier||row.multiplier||row.mult||100)||100) : mult,
           fee: (function(){
-            // Use CSV fee column if present; otherwise apply default commission × qty
+            // Gen format already resolved _genFee; otherwise use fee/commission column
+            if(row._genFee !== undefined) return row._genFee;
             const csvFee = parseFloat(row.fee || row.commission || row.fees || 0);
             if(csvFee) return csvFee;
             const defComm = getAccTrading().commission || 0;
@@ -9475,6 +9597,7 @@ function snapshotUserData() {
     calChkSessions: calChkSessions,
     marketOutlook: marketOutlook,
     outlookHistory: outlookHistory,
+    noTradeDays: noTradeDays,
   };
 }
 
@@ -9504,6 +9627,9 @@ function applyUserData(data) {
   }
   if(data.outlookHistory) {
     outlookHistory.splice(0, outlookHistory.length, ...data.outlookHistory);
+  }
+  if(data.noTradeDays) {
+    Object.assign(noTradeDays, data.noTradeDays);
   }
 }
 
@@ -13275,6 +13401,69 @@ function setAccTrading(key, value) {
   acct.tradingSettings[key] = value;
   saveCurrentUserData();
 }
+
+
+
+// ═══════════════════════════════════════════════════════════
+// NO-TRADE DAY JOURNAL
+// ═══════════════════════════════════════════════════════════
+
+function openNoTradeDay(ds) {
+  const entry = noTradeDays[ds] || {};
+  document.getElementById('ntd-date-lbl').textContent =
+    '📅 ' + dateLocal(ds).toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'});
+  document.getElementById('ntd-reason').value      = entry.reason || 'no-setup';
+  document.getElementById('ntd-notes').value       = entry.notes  || '';
+  document.getElementById('ntd-observation').value = entry.observation || '';
+  // Store date for save
+  document.getElementById('no-trade-modal').dataset.date = ds;
+  document.getElementById('no-trade-modal').classList.add('open');
+  setTimeout(() => document.getElementById('ntd-notes').focus(), 80);
+}
+
+function saveNoTradeDay() {
+  const ds    = document.getElementById('no-trade-modal').dataset.date;
+  const reason= document.getElementById('ntd-reason').value;
+  const notes = document.getElementById('ntd-notes').value.trim();
+  const obs   = document.getElementById('ntd-observation').value.trim();
+  if(!ds) return;
+
+  noTradeDays[ds] = {
+    reason, notes, observation: obs,
+    savedAt: new Date().toISOString(),
+  };
+
+  closeModal('no-trade-modal');
+  saveCurrentUserData();
+  renderCal();
+  if(calSel === ds) renderCalSide(ds);
+  showNotif('No-Trade Day journaled 📵',
+    dateLocal(ds).toLocaleDateString('en-US', {month:'short', day:'numeric'}) +
+    ' — ' + document.getElementById('ntd-reason').options[document.getElementById('ntd-reason').selectedIndex].text,
+    'success');
+}
+
+function deleteNoTradeDay(ds) {
+  showConfirm('🗑 Remove Entry?', 'Remove no-trade journal for ' + ds + '?', 'var(--red)', function() {
+    delete noTradeDays[ds];
+    saveCurrentUserData();
+    renderCal();
+    if(calSel === ds) renderCalSide(ds);
+    showNotif('Entry removed', '', 'info');
+  });
+}
+
+const NTD_REASON_LABELS = {
+  'market-conditions': '📊 Poor market conditions',
+  'news-event':        '📰 High-impact news event',
+  'personal':          '🙋 Personal / health day',
+  'overtrading-risk':  '🛑 Avoiding overtrading',
+  'daily-loss-limit':  '🚫 Hit daily loss limit',
+  'no-setup':          '🔍 No valid setup found',
+  'travel':            '✈️ Travel / away',
+  'review-day':        '📋 Review & study day',
+  'other':             '✏️ Other',
+};
 
 
 function showNotif(title,msg,type='info'){const stack=document.getElementById('notif-stack');if(!stack)return;const id='n'+nid++;const tc={info:'',danger:'nd',success:'ns',warn:'nw'};const div=document.createElement('div');div.className=`notif ${tc[type]||''}`;div.id=id;div.innerHTML=`<div style="flex:1"><div style="font-size:12px;font-weight:600;margin-bottom:2px">${title}</div>${msg?`<div style="font-size:11px;color:var(--text2);line-height:1.4">${msg}</div>`:''}</div><div style="color:var(--text3);font-size:14px;cursor:pointer;flex-shrink:0" onclick="document.getElementById('${id}').remove()">×</div>`;stack.appendChild(div);setTimeout(()=>{const e=document.getElementById(id);if(e){e.style.opacity='0';e.style.transition='opacity .3s';setTimeout(()=>{const x=document.getElementById(id);if(x)x.remove();},300);}},6000);}
