@@ -3484,7 +3484,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
       <!-- Setup tab -->
       <div id="etm-setup" style="display:none">
         <div class="fg" style="margin-bottom:12px">
-          <label>Setup Type</label>
+          <label>Setup Type <span style="font-size:10px;color:var(--text3);font-weight:400">— select one or more</span></label>
           <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px" id="etm-setup-grid"></div>
         </div>
         <div class="fg" style="margin-bottom:10px">
@@ -4411,7 +4411,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
         </div>
         <!-- Setup type quick-select -->
         <div class="fg" style="margin-bottom:10px">
-          <label>Setup Type (optional)</label>
+          <label>Setup Type (optional) <span style="font-size:10px;color:var(--text3);font-weight:400">— select one or more</span></label>
           <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px" id="cm-setups"></div>
         </div>
         <!-- Quick tags -->
@@ -4510,7 +4510,7 @@ let affIdx=Math.floor(Math.random()*AFFS.length);
 let selMoods=new Set();
 let calMon=2,calYr=2025,calSel=null,calLogDate=null,calChkSessions={};
 let calChkTradeId=null; // tracks which trade the pre-trade checklist is linked to
-let logStepCur='details',logSetupSel=null,logConf=0,logExec=0,logSelTags=new Set(),lfMedia={img:[],vid:[]};
+let logStepCur='details',logSetupSels=new Set(),logConf=0,logExec=0,logSelTags=new Set(),lfMedia={img:[],vid:[]};
 let alTabCur='active',nid=0,charts_={};
 let editingTagId=null,tmFilter='all',tmColorSel='tc-blue';
 const PAGE_TITLES={home:'Home',dashboard:'Dashboard',calendar:'Trade Calendar',analytics:'Analytics',trades:'Trade Log',log:'Add Trade',import:'Import CSV',checklist:'Strategy Checklist',alerts:'Alerts',tags:'Tag Manager',settings:'Settings',plan:'Trading Plan',missed:'Missed Trades'};
@@ -5888,7 +5888,7 @@ function renderTrades(){
     if(fd_&&t.dir!==fd_)return false;
     if(fr==='Win'&&Pnet(t)<=0)return false;
     if(fr==='Loss'&&Pnet(t)>=0)return false;
-    if(fs&&t.setup!==fs)return false;
+    if(fs&&!(t.setup||'').split(',').map(s=>s.trim()).includes(fs))return false;
     return true;
   }).sort((a,b)=>b.date.localeCompare(a.date)||((b.time||'').localeCompare(a.time||'')));
 
@@ -6156,7 +6156,7 @@ function exportTradesCSV(){
 // LOG TRADE
 // ═══════════════════════════════════════
 function initLog(){
-  logStepCur='details';logSetupSel=null;logConf=0;logExec=0;logSelTags.clear();lfMedia={img:[],vid:[]};
+  logStepCur='details';logSetupSels=new Set();logConf=0;logExec=0;logSelTags.clear();lfMedia={img:[],vid:[]};
   document.getElementById('lf-date').value=new Date().toISOString().slice(0,10);
   document.getElementById('lf-time').value=new Date().toTimeString().slice(0,5);
   ['lf-sym','lf-entry','lf-exit'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
@@ -6213,11 +6213,15 @@ function calcLfPrev(){
   prev.classList.add('show');
 }
 function initLogSetup(){
-  document.getElementById('lf-setups').innerHTML=SETUP_TYPES.map(s=>`<div class="setup-opt ${logSetupSel===s.n?'sel':''}" onclick="selSetup('${s.n}',this)"><span style="font-size:15px">${s.i}</span><div style="font-size:12px;font-weight:500">${s.n}</div></div>`).join('');
+  document.getElementById('lf-setups').innerHTML=SETUP_TYPES.map(s=>`<div class="setup-opt ${logSetupSels.has(s.n)?'sel':''}" onclick="selSetup('${s.n}',this)"><span style="font-size:15px">${s.i}</span><div style="font-size:12px;font-weight:500">${s.n}</div></div>`).join('');
   const stars=document.getElementById('lf-conf-stars');
   if(!stars.children.length){for(let i=1;i<=5;i++){const s=document.createElement('span');s.className='star'+(i<=logConf?' lit':'');s.textContent='★';s.onclick=()=>{logConf=i;document.querySelectorAll('#lf-conf-stars .star').forEach((x,j)=>x.classList.toggle('lit',j+1<=i));document.getElementById('lf-conf-lbl').textContent=CONF_LBL[i];};stars.appendChild(s);}}
 }
-function selSetup(n,el){logSetupSel=logSetupSel===n?null:n;document.querySelectorAll('.setup-opt').forEach(o=>o.classList.remove('sel'));if(logSetupSel)el.classList.add('sel');}
+function selSetup(n,el){
+  if(logSetupSels.has(n)) logSetupSels.delete(n);
+  else logSetupSels.add(n);
+  el.classList.toggle('sel', logSetupSels.has(n));
+}
 function renderLogTags(){
   ['strategy','emotion','mistake'].forEach(cat=>{const el=document.getElementById('lf-tb-'+cat);if(!el)return;el.innerHTML=tagLibrary.filter(t=>t.cat===cat).map(t=>`<span class="stag ${logSelTags.has(t.id)?'':''}\" onclick="togLTag(${t.id})" id="ltag-${t.id}" style="${logSelTags.has(t.id)?TAG_STYLE[t.color]||'':''}">${t.name}</span>`).join('');});
   renderLogSelTags();
@@ -6246,7 +6250,7 @@ function saveNewTrade(){const sym=document.getElementById('lf-sym').value.trim()
     expiry:_isOpt?(document.getElementById('lf-expiry').value||''):undefined,
     underlying:_isOpt?(document.getElementById('lf-underlying').value.trim()||''):undefined,
     tags:tagLibrary.filter(x=>logSelTags.has(x.id)).map(x=>x.name.toLowerCase()),
-    setup:logSetupSel||'',notes:document.getElementById('lf-post')?.value||'',media:[]
+    setup:Array.from(logSetupSels).join(', '),notes:document.getElementById('lf-post')?.value||'',media:[]
   });showNotif('Trade saved',`${sym} logged successfully`,'success');nav('trades');}
 
 // ═══════════════════════════════════════
@@ -7727,9 +7731,9 @@ function openEditTrade(id){
   // Setup type grid
   const sg=document.getElementById('etm-setup-grid');
   if(sg) sg.innerHTML=SETUP_TYPES.map(s=>`<div onclick="etmToggleSetup('${s.n}',this)" id="etms-${s.n.replace(/\s/g,'-')}"
-    style="padding:4px 10px;border-radius:16px;font-size:11px;cursor:pointer;border:1px solid ${t.setup===s.n?'rgba(0,212,255,.4)':'var(--bdr2)'};
-    background:${t.setup===s.n?'rgba(0,212,255,.12)':'var(--bg3)'};
-    color:${t.setup===s.n?'var(--cyan)':'var(--text2)'};transition:all .15s">${s.i} ${s.n}</div>`).join('');
+    style="padding:4px 10px;border-radius:16px;font-size:11px;cursor:pointer;border:1px solid ${etmSetupSels.has(s.n)?'rgba(0,212,255,.4)':'var(--bdr2)'};
+    background:${etmSetupSels.has(s.n)?'rgba(0,212,255,.08)':'var(--bg3)'};
+    color:${(t.setup||'').split(',').map(s=>s.trim()).includes(s.n)?'var(--cyan)':'var(--text2)'};transition:all .15s">${s.i} ${s.n}</div>`).join('');
 
   // Confidence stars
   etmRenderStars('etm-conf-stars','etm-conf-lbl',etmConf,['','Very Low','Low','Moderate','High','Very High — A+'],'etmConf');
@@ -7747,11 +7751,17 @@ function openEditTrade(id){
   document.getElementById('edit-trade-modal').classList.add('open');
 }
 
-let etmSetupSel=null;
+let etmSetupSels=new Set();
 function etmToggleSetup(name,el){
-  etmSetupSel=etmSetupSel===name?null:name;
-  document.querySelectorAll('[id^="etms-"]').forEach(b=>{b.style.background='var(--bg3)';b.style.color='var(--text2)';b.style.borderColor='var(--bdr2)';});
-  if(etmSetupSel&&el){el.style.background='rgba(0,212,255,.12)';el.style.color='var(--cyan)';el.style.borderColor='rgba(0,212,255,.4)';}
+  if(etmSetupSels.has(name)) etmSetupSels.delete(name);
+  else etmSetupSels.add(name);
+  document.querySelectorAll('[id^="etms-"]').forEach(b=>{
+    b.style.background='var(--bg3)';b.style.color='var(--text2)';b.style.borderColor='var(--bdr2)';
+  });
+  etmSetupSels.forEach(n=>{
+    const b=document.getElementById('etms-'+n.replace(/\s/g,'-'));
+    if(b){b.style.background='rgba(0,212,255,.12)';b.style.color='var(--cyan)';b.style.borderColor='rgba(0,212,255,.4)';}
+  });
 }
 
 function etmRenderStars(starsId,lblId,rating,labels,varName){
@@ -7853,7 +7863,7 @@ function saveEditTrade(){
 
   // Get setup from grid selection
   const selSetupEl=document.querySelector('[id^="etms-"][style*="rgba(0,212,255"]');
-  const resolvedSetup=etmSetupSel||trades[idx].setup||'';
+  const resolvedSetup=Array.from(etmSetupSels).join(', ')||trades[idx].setup||'';
 
   const _saveAsset=document.getElementById('etm-asset').value;
   const _saveIsOpt=_saveAsset==='Options';
@@ -8747,7 +8757,7 @@ function renderSetupManagerList() {
 }
 
 function countSetupUsage(name) {
-  return trades.filter(t => t.setup === name).length;
+  return trades.filter(t => (t.setup||'').split(',').map(s=>s.trim()).includes(name)).length;
 }
 
 // ── Add ──
@@ -8783,7 +8793,12 @@ function saveSetupEdit(i) {
   // Update any trades using the old name
   const oldName = SETUP_TYPES[i].n;
   if(oldName !== newName) {
-    trades.forEach(t => { if(t.setup === oldName) t.setup = newName; });
+    trades.forEach(t => {
+      if(!t.setup) return;
+      const parts = t.setup.split(',').map(s=>s.trim());
+      const idx = parts.indexOf(oldName);
+      if(idx >= 0) { parts[idx] = newName; t.setup = parts.join(', '); }
+    });
     // Update plan setups selection
     const idx = (tradingPlan.setups||[]).indexOf(oldName);
     if(idx>=0) tradingPlan.setups[idx] = newName;
@@ -8813,7 +8828,11 @@ function deleteSetupType(i) {
     : `Delete "${s.n}"?`;
   if(!confirm(msg)) return;
   // Clear from trades
-  trades.forEach(t => { if(t.setup === s.n) t.setup = ''; });
+  trades.forEach(t => {
+    if(!t.setup) return;
+    const parts = t.setup.split(',').map(s=>s.trim()).filter(p => p !== s.n);
+    t.setup = parts.join(', ');
+  });
   // Remove from plan selection
   if(tradingPlan.setups) tradingPlan.setups = tradingPlan.setups.filter(x=>x!==s.n);
   SETUP_TYPES.splice(i, 1);
@@ -8864,7 +8883,7 @@ function refreshAllSetupRenderers() {
   // 1. Add Trade form (step 2 — setup grid)
   const lfSetups = document.getElementById('lf-setups');
   if(lfSetups) lfSetups.innerHTML = SETUP_TYPES.map(s =>
-    `<div class="setup-opt ${logSetupSel===s.n?'sel':''}" onclick="selSetup('${s.n}',this)">
+    `<div class="setup-opt ${logSetupSels.has(s.n)?'sel':''}" onclick="selSetup('${s.n}',this)">
       <span style="font-size:15px">${s.i}</span>
       <div style="font-size:12px;font-weight:500">${s.n}</div>
     </div>`).join('');
